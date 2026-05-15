@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionStyle, type PanInfo, type Variants } from "framer-motion";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { AnimatePresence, animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionStyle, type PanInfo, type Variants } from "framer-motion";
 
 const navItems = [
   { label: "Mint", href: "#mint" },
@@ -49,6 +49,14 @@ const buyUrl =
 const billboardMessage = "WELCOME TO\nTHE CLUB, BOBUDDY!";
 const themeStorageKey = "bobros-theme";
 type ThemeMode = "day" | "night";
+
+const preloaderLines = [
+  "CONNECTING TO BOBROS CARTEL...",
+  "CHECKING WALLET BALANCE...",
+  "CALCULATING FUTURE BILLIONS...",
+  "PRINTING FAKE ROADMAP...",
+  "ACCESS GRANTED",
+];
 
 const revealEase = [0.22, 1, 0.36, 1] as const;
 
@@ -123,6 +131,38 @@ const cardReveal: Variants = {
     },
   },
 };
+
+function Preloader() {
+  return (
+    <motion.div
+      className="preloader"
+      initial={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+      exit={{ opacity: 0, scale: 1.035, filter: "blur(12px)" }}
+      transition={{ duration: 0.45, ease: revealEase }}
+      aria-label="BOBROS loading sequence"
+      role="status"
+    >
+      <div className="preloader-panel">
+        <img className="preloader-logo" src="/assets/logo.png" alt="BOBROS Cartel" />
+
+        <div className="preloader-lines" aria-live="polite">
+          {preloaderLines.map((line, index) => (
+            <span className="preloader-line" style={{ "--line-delay": `${index * 0.33}s` } as CSSProperties} key={line}>
+              <span className="preloader-prompt">&gt;</span>
+              {line}
+            </span>
+          ))}
+        </div>
+
+        <div className="preloader-bar" aria-hidden="true">
+          <span className="preloader-bar-fill" />
+        </div>
+
+        <div className="preloader-stamp">FUTURE BILLIONAIRE DETECTED</div>
+      </div>
+    </motion.div>
+  );
+}
 
 function Billboard({ style }: { style?: MotionStyle } = {}) {
   const [typed, setTyped] = useState("");
@@ -563,6 +603,7 @@ function HeroScene() {
 }
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
   const [theme, setTheme] = useState<ThemeMode>("day");
   const [themeReady, setThemeReady] = useState(false);
   const [streetParallaxEnabled, setStreetParallaxEnabled] = useState(false);
@@ -603,6 +644,12 @@ export default function Home() {
   const billboardY = useTransform(my, [-0.5, 0.5], [-3, 3]);
   const atmX = useTransform(mx, [-0.5, 0.5], [2, -2]);
   const atmY = useTransform(my, [-0.5, 0.5], [1, -1]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setIsLoading(false), 2550);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(themeStorageKey);
@@ -655,6 +702,8 @@ export default function Home() {
 
   return (
     <main className={`page-shell theme-${theme}`} data-theme={theme} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+      <AnimatePresence>{isLoading && <Preloader />}</AnimatePresence>
+
       <div className="paper-grain" aria-hidden="true" />
       <div className="night-stars" aria-hidden="true" />
       <div className="night-moon" aria-hidden="true" />
