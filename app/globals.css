@@ -2074,7 +2074,7 @@ img {
   }
 
   .street-stage {
-    min-height: clamp(960px, 92svh, 1180px);
+    min-height: clamp(850px, 92svh, 1050px);
   }
 
   .street-bg-layer {
@@ -2096,24 +2096,28 @@ img {
     z-index: 4;
   }
 
-  .street-content {
+  .street-scene .street-content {
     position: absolute;
-    inset: auto 0 2rem 0;
+    left: 0;
+    right: 0;
+    bottom: 0.25rem;
     z-index: 5;
     width: min(calc(100% - 32px), 760px);
     margin: 0 auto;
-    padding-bottom: 0;
+    padding: 0;
     display: grid;
     grid-template-columns: 1fr;
     align-items: end;
     justify-items: center;
-    gap: 1rem;
+    gap: 0.35rem;
   }
 
-  .billboard-shell {
+  .street-content .billboard-shell {
     display: block;
-    width: min(580px, 76vw);
+    width: min(650px, 86vw);
     top: 0 !important;
+    transform: none !important;
+    margin: 0;
     justify-self: center;
   }
 
@@ -2121,13 +2125,17 @@ img {
   .street-content .atm-wrap {
     position: relative !important;
     top: 0 !important;
-    width: min(315px, 42vw);
+    width: min(300px, 42vw);
+    transform: none !important;
+    margin-top: -22rem;
     margin-left: 0;
-    justify-self: center;
+    margin-right: 0;
+    justify-self: end;
+    z-index: 7;
   }
 }
 
-@media (min-width: 761px) and (max-width: 1280px) and (min-height: 521px) and (orientation: landscape) {
+@media (min-width: 761px) and (max-width: 1280px) and (orientation: landscape) {
   .street-scene {
     padding-top: 0.6rem;
     padding-bottom: 0;
@@ -2135,7 +2143,7 @@ img {
   }
 
   .street-stage {
-    min-height: clamp(660px, 86svh, 740px);
+    min-height: clamp(620px, 86svh, 760px);
   }
 
   .street-bg-layer {
@@ -2157,34 +2165,37 @@ img {
     z-index: 4;
   }
 
-  .street-content {
+  .street-scene .street-content {
     position: absolute;
-    inset: auto 0 2.2rem 0;
+    inset: auto 0 0.5rem 0;
     z-index: 5;
     width: min(calc(100% - 32px), 1080px);
     margin: 0 auto;
-    padding-bottom: 0;
+    padding: 0;
     display: grid;
-    grid-template-columns: minmax(420px, 0.72fr) minmax(260px, 0.32fr);
+    grid-template-columns: minmax(430px, 0.72fr) minmax(260px, 0.32fr);
     align-items: end;
     justify-content: center;
     justify-items: stretch;
-    gap: clamp(0.9rem, 2.2vw, 1.6rem);
+    gap: clamp(1rem, 2vw, 1.6rem);
   }
 
-  .billboard-shell {
+  .street-content .billboard-shell {
     display: block;
-    width: min(560px, 46vw);
+    width: min(620px, 54vw);
     top: 0 !important;
+    transform: translateY(28px) !important;
+    margin: 0;
     justify-self: end;
   }
 
   .atm-wrap,
   .street-content .atm-wrap {
     position: relative !important;
-    top: 16px !important;
-    width: min(300px, 24vw);
+    top: 0 !important;
+    width: min(310px, 25vw);
     min-width: 260px;
+    transform: translateY(18px) !important;
     margin-left: 0;
     justify-self: start;
   }
@@ -2357,7 +2368,7 @@ img {
     display: none;
   }
 
-  .street-content {
+  .street-scene .street-content {
     position: absolute;
     inset: auto 0 0.65rem 0;
     z-index: 5;
@@ -2371,7 +2382,7 @@ img {
     gap: clamp(0.7rem, 2vw, 1.1rem);
   }
 
-  .billboard-shell {
+  .street-content .billboard-shell {
     display: none;
   }
 
