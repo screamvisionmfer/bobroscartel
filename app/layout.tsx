@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "BOBROS - Billionaire Bobo Club",
-    description: "1,337 BOBROS living the unemployed dream.",
+    description: "2,222 BOBROS living the unemployed dream.",
     url: "/",
     siteName: "BOBROS Cartel",
     type: "website",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "BOBROS - Billionaire Bobo Club",
-    description: "1,337 BOBROS living the unemployed dream.",
+    description: "2,222 BOBROS living the unemployed dream.",
     images: [previewImage],
   },
 };

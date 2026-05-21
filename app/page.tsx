@@ -15,7 +15,7 @@ const navItems = [
 
 const stats = [
   {
-    value: "1,337",
+    value: "2,222",
     label: "BOBROS SUPPLY",
     text: "A tight club, not an endless crowd.",
   },
@@ -922,7 +922,7 @@ export default function Home() {
           <span className="eyebrow">WELCOME TO THE BOBROS</span>
           <h2>UNEMPLOYED DREAM, BILLIONAIRE ENERGY</h2>
           <p>
-            1,337 hand-drawn BOBROS living somewhere between broke, blessed and delusional. A meme-first PFP club built
+            2,222 hand-drawn BOBROS living somewhere between broke, blessed and delusional. A meme-first PFP club built
             for timeline chaos, inside jokes and future cult status.
           </p>
           <div className="about-tags" aria-label="BOBROS principles">
@@ -957,7 +957,7 @@ export default function Home() {
       >
         <span className="eyebrow">FUTURE BILLIONAIRES ONLY</span>
         <h2>THE COLLECTION</h2>
-        <p>1,337 BOBROS LIVING THE UNEMPLOYED DREAM</p>
+        <p>2,222 BOBROS LIVING THE UNEMPLOYED DREAM</p>
 
         <CollectionDrum />
       </motion.section>
