@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionStyle, type PanInfo, type Variants } from "framer-motion";
 
+const mintUrl = "https://launchmynft.io/mint/bobroscartel";
+
 const navItems = [
-  { label: "Mint", href: "#mint" },
+  { label: "Mint", href: mintUrl, external: true },
   { label: "Collection", href: "#collection" },
   { label: "$BOBO", href: "#token" },
   { label: "About", href: "#about" },
@@ -260,7 +262,7 @@ function Billboard({ style }: { style?: MotionStyle } = {}) {
       </div>
 
       <div className="billboard-button-zone">
-        <a className="billboard-button" href="#collection">
+        <a className="billboard-button" href={mintUrl} target="_blank" rel="noreferrer">
           <span>MINT YOUR BOBRO NOW!</span>
         </a>
       </div>
@@ -698,7 +700,7 @@ function HeroScene() {
       >
         <motion.div className="hero-mint-scroll" style={{ opacity: mintOpacity, y: mintY }}>
           <div className="hero-mint-embed" aria-label="BOBROS mint terminal">
-            <span className="mint-terminal-kicker">LIVE MINT TERMINAL</span>
+            <span className="mint-terminal-kicker">LIVE MINT TERMINAL POWERED BY launchmynft.io</span>
 
             <div className="mint-embed-frame">
               <div id="mint-button-container" className="launchmynft-button-host" />
@@ -895,7 +897,7 @@ export default function Home() {
         >
           <nav className="nav" aria-label="Main navigation">
             {navItems.map((item) => (
-              <a key={item.label} href={item.href}>
+              <a key={item.label} href={item.href} target={item.external ? "_blank" : undefined} rel={item.external ? "noreferrer" : undefined}>
                 {item.label}
               </a>
             ))}
@@ -928,7 +930,7 @@ export default function Home() {
             <span>NO FAKE UTILITY</span>
             <span>JUST BOBROS</span>
           </div>
-          <a className="yellow-button" href="#collection">
+          <a className="yellow-button" href={mintUrl} target="_blank" rel="noreferrer">
             <span>ENTER THE CLUB</span>
             <strong>→</strong>
           </a>
@@ -991,7 +993,7 @@ export default function Home() {
 
           <motion.div className="street-content shell-wide" variants={staggerParent}>
             <Billboard style={billboardStyle} />
-            <motion.a className="mobile-mint-cta" href="#collection" aria-label="Mint your Bobro now" variants={cardReveal}>
+            <motion.a className="mobile-mint-cta" href={mintUrl} target="_blank" rel="noreferrer" aria-label="Mint your Bobro now" variants={cardReveal}>
               <span>Mint your Bobro now</span>
             </motion.a>
             <AtmInteractive style={atmStyle} />
@@ -1005,7 +1007,7 @@ export default function Home() {
 
           <div className="footer-overlay">
             <div className="footer-link-grid" aria-label="BOBROS footer links">
-              <a className="footer-card footer-card-mint" href="#collection" aria-label="Mint BOBROS">
+              <a className="footer-card footer-card-mint" href={mintUrl} target="_blank" rel="noreferrer" aria-label="Mint BOBROS">
                 <span>MINT</span>
                 <strong>BOBROS</strong>
               </a>

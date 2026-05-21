@@ -458,15 +458,19 @@ img {
 
 .mint-terminal-kicker {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   justify-self: center;
+  max-width: 100%;
   padding: 0.2rem 0.58rem;
   border: 2px solid rgba(0, 0, 0, 0.72);
   border-radius: 999px;
   background: rgba(255, 248, 213, 0.82);
   color: #171717;
-  font-size: 0.64rem;
-  line-height: 1;
-  letter-spacing: 0.12em;
+  font-size: clamp(0.52rem, 0.68vw, 0.62rem);
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-align: center;
 }
 
 .mint-embed-frame {
