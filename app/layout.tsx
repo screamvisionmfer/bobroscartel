@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bobroscartel.com";
@@ -44,7 +45,27 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        <link rel="stylesheet" href="https://storage.googleapis.com/scriptslmt/0.1.3/solana.css" />
+        <script
+          id="launchmynft-config"
+          dangerouslySetInnerHTML={{
+            __html: `
+window.ownerId = "2Fbg8k4Cz1vfTCSBVKG15sFzRh6yLroJuH3zpM4FqLPo";
+window.collectionId = "eLeLQQfwJKOCtALMbmHS";
+            `,
+          }}
+        />
+      </head>
+      <body>
+        <Script
+          id="launchmynft-solana"
+          type="module"
+          src="https://storage.googleapis.com/scriptslmt/0.1.3/solana.js"
+          strategy="afterInteractive"
+        />
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,0 +1,41 @@
+{
+  "name": "BOBRO #1624",
+  "description": "BOBRO #1624 - is a handcrafted collection of 2,222 mixed-media NFTs created through sketching, digital paper-cut collage and real-world texture sampling. Inspired by $BOBO, it reimagines Bobo as an untouchable web3 patron.",
+  "symbol": "BOBROS",
+  "image": "./images/nft_1624.png",
+  "attributes": [
+    {
+      "trait_type": "Background",
+      "value": "Portal"
+    },
+    {
+      "trait_type": "Bobo Type",
+      "value": "Based-Bobo"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "UFO"
+    },
+    {
+      "trait_type": "Clothes",
+      "value": "Bobo T-Shirt"
+    },
+    {
+      "trait_type": "Head",
+      "value": "Vampire"
+    },
+    {
+      "trait_type": "Mouth",
+      "value": "Smile"
+    },
+    {
+      "trait_type": "Hands",
+      "value": "Touch Grass"
+    },
+    {
+      "trait_type": "Rarity Rank",
+      "value": 598,
+      "display_type": "number"
+    }
+  ]
+}

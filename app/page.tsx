@@ -34,14 +34,50 @@ const stats = [
   },
 ];
 
-const cards = [
-  { id: "#0421", className: "card-purple" },
-  { id: "#0422", className: "card-green" },
-  { id: "#0423", className: "card-yellow" },
-  { id: "#0424", className: "card-red" },
-  { id: "#0425", className: "card-blue" },
-  { id: "#0426", className: "card-cream" },
-];
+type NftTrait = {
+  trait_type?: string;
+  value?: string | number | boolean;
+};
+
+type NftMetadata = {
+  name?: string;
+  attributes?: NftTrait[];
+};
+
+const nftIds = [
+  1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620, 1621, 1622, 1623, 1624, 1625, 1626,
+] as const;
+
+const nftCardClasses = ["card-purple", "card-green", "card-yellow", "card-red", "card-blue", "card-cream"];
+
+const nftItems = nftIds.map((id) => ({
+  id,
+  image: `/nfts/nft_${id}.png`,
+  metadata: `/nfts/nft_${id}.json`,
+}));
+
+const cardSlots = Array.from({ length: 6 }, (_, index) => ({
+  slotIndex: index,
+  className: nftCardClasses[index % nftCardClasses.length] ?? "card-yellow",
+}));
+
+const preferredTraitTypes = ["Background", "Bobo Type", "Eyes", "Clothes", "Head", "Mouth"];
+
+function positiveModulo(value: number, length: number) {
+  return ((value % length) + length) % length;
+}
+
+function pickDisplayTraits(metadata: NftMetadata | null | undefined) {
+  const traits = metadata?.attributes ?? [];
+  const pickedTraits = preferredTraitTypes
+    .map((traitType) => traits.find((trait) => trait.trait_type === traitType))
+    .filter((trait): trait is NftTrait => Boolean(trait));
+
+  const pickedNames = new Set(pickedTraits.map((trait) => trait.trait_type));
+  const fallbackTraits = traits.filter((trait) => !pickedNames.has(trait.trait_type));
+
+  return [...pickedTraits, ...fallbackTraits].slice(0, 6);
+}
 
 const contractAddress = "4nV5gNwwP68zUDat26ySChREqVaQaLudfJBkSgEzpump";
 const buyUrl =
@@ -290,16 +326,37 @@ function AtmInteractive({ style }: { style?: MotionStyle } = {}) {
 }
 
 function CollectionDrum() {
-  const angleStep = 360 / cards.length;
+  const angleStep = 360 / cardSlots.length;
   const rotation = useMotionValue(0);
   const smoothRotation = useSpring(rotation, { stiffness: 90, damping: 18, mass: 0.7 });
   const [activeIndex, setActiveIndex] = useState(0);
+  const [baseIndex, setBaseIndex] = useState(0);
+  const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
+  const [nftMetadataById, setNftMetadataById] = useState<Record<number, NftMetadata | null | undefined>>({});
   const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
   const resumeAutoplayTimeout = useRef<number | undefined>(undefined);
+  const lastSnappedStep = useRef(0);
+
+  const getNftForSlot = (slotIndex: number) => {
+    const rawOffset = positiveModulo(slotIndex - activeIndex, cardSlots.length);
+    const centeredOffset = rawOffset > cardSlots.length / 2 ? rawOffset - cardSlots.length : rawOffset;
+    return nftItems[positiveModulo(baseIndex + centeredOffset, nftItems.length)];
+  };
+
+  const activeCard = getNftForSlot(activeIndex);
+  const activeMetadata = nftMetadataById[activeCard.id];
+  const activeTraits = pickDisplayTraits(activeMetadata);
 
   const syncActiveCard = (value: number) => {
     const snappedStep = Math.round(value / angleStep);
-    const nextIndex = ((-snappedStep % cards.length) + cards.length) % cards.length;
+    const stepDelta = snappedStep - lastSnappedStep.current;
+    const nextIndex = positiveModulo(-snappedStep, cardSlots.length);
+
+    if (stepDelta !== 0) {
+      setBaseIndex((current) => positiveModulo(current - stepDelta, nftItems.length));
+      lastSnappedStep.current = snappedStep;
+    }
+
     setActiveIndex(nextIndex);
   };
 
@@ -358,36 +415,117 @@ function CollectionDrum() {
     };
   }, []);
 
-  return (
-    <div className="collection-drum" aria-label="Draggable BOBROS collection carousel">
-      <motion.div
-        className="drum-stage"
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.08}
-        onDragStart={handleDragStart}
-        onDrag={handleDrag}
-        onDragEnd={handleDragEnd}
-        style={{ rotateY: smoothRotation }}
-      >
-        {cards.map((card, index) => {
-          const angle = index * angleStep;
+  useEffect(() => {
+    let isCancelled = false;
 
-          return (
-            <article
-              key={card.id}
-              className={`drum-card ${card.className}${activeIndex === index ? " is-active" : ""}`}
-              style={{ transform: `rotateY(${angle}deg) translateZ(var(--drum-radius))` }}
-            >
-              <div className="drum-card-inner">
-                <span className="card-id">{card.id}</span>
-                <img src="/assets/silhouette.png" alt="Hidden BOBRO" className="card-silhouette" draggable={false} />
+    const loadMetadata = async () => {
+      const entries = await Promise.all(
+        nftItems.map(async (item): Promise<[number, NftMetadata | null]> => {
+          try {
+            const response = await fetch(item.metadata);
+            if (!response.ok) return [item.id, null];
+
+            const metadata = (await response.json()) as NftMetadata;
+            return [item.id, metadata];
+          } catch {
+            return [item.id, null];
+          }
+        }),
+      );
+
+      if (isCancelled) return;
+
+      const nextMetadata: Record<number, NftMetadata | null> = {};
+      entries.forEach(([id, metadata]) => {
+        nextMetadata[id] = metadata;
+      });
+      setNftMetadataById(nextMetadata);
+    };
+
+    loadMetadata();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="collection-showcase">
+      <div className="collection-drum" aria-label="Draggable BOBROS collection carousel">
+        <motion.div
+          className="drum-stage"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.08}
+          onDragStart={handleDragStart}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
+          style={{ rotateY: smoothRotation }}
+        >
+          {cardSlots.map((slot) => {
+            const angle = slot.slotIndex * angleStep;
+            const card = getNftForSlot(slot.slotIndex);
+            const metadata = nftMetadataById[card.id];
+            const displayTraits = pickDisplayTraits(metadata);
+            const isHovered = hoveredSlot === slot.slotIndex;
+
+            return (
+              <article
+                key={slot.slotIndex}
+                className={`drum-card ${slot.className}${activeIndex === slot.slotIndex ? " is-active" : ""}${isHovered ? " is-hovered" : ""}`}
+                style={{ transform: `rotateY(${angle}deg) translateZ(var(--drum-radius))` }}
+                tabIndex={0}
+                onMouseEnter={() => setHoveredSlot(slot.slotIndex)}
+                onMouseLeave={() => setHoveredSlot(null)}
+                onFocus={() => setHoveredSlot(slot.slotIndex)}
+                onBlur={() => setHoveredSlot(null)}
+              >
+                <div className="drum-card-inner">
+                  <span className="card-id">#{card.id}</span>
+                  <img src={card.image} alt={`BOBRO #${card.id}`} className="card-nft-image" draggable={false} />
+
+                  <div className="nft-hover-popover" aria-hidden={!isHovered}>
+                    <strong className="nft-hover-title">BOBRO #{card.id}</strong>
+                    <div className="nft-hover-traits">
+                      {metadata === undefined ? (
+                        <p className="nft-hover-empty">Traits loading...</p>
+                      ) : displayTraits.length > 0 ? (
+                        displayTraits.map((trait, index) => (
+                          <div className="nft-hover-row" key={`${card.id}-${trait.trait_type ?? "Trait"}-${index}`}>
+                            <span>{trait.trait_type ?? "Trait"}:</span>
+                            <strong>{String(trait.value ?? "Unknown")}</strong>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="nft-hover-empty">No traits found</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </motion.div>
+        <div className="drum-floor" aria-hidden="true" />
+      </div>
+
+      <aside className="nft-mobile-popover" aria-live="polite">
+        <strong className="nft-hover-title">BOBRO #{activeCard.id}</strong>
+        <div className="nft-hover-traits">
+          {activeMetadata === undefined ? (
+            <p className="nft-hover-empty">Traits loading...</p>
+          ) : activeTraits.length > 0 ? (
+            activeTraits.map((trait, index) => (
+              <div className="nft-hover-row" key={`active-${activeCard.id}-${trait.trait_type ?? "Trait"}-${index}`}>
+                <span>{trait.trait_type ?? "Trait"}:</span>
+                <strong>{String(trait.value ?? "Unknown")}</strong>
               </div>
-            </article>
-          );
-        })}
-      </motion.div>
-      <div className="drum-floor" aria-hidden="true" />
+            ))
+          ) : (
+            <p className="nft-hover-empty">No traits found</p>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }
@@ -424,6 +562,8 @@ function HeroScene() {
 
   const scrollDownOpacity = useTransform(scroll, [0, 95, 210], [1, 0.82, 0]);
   const scrollDownY = useTransform(scroll, [0, 210], [0, 16]);
+  const mintOpacity = useTransform(scroll, [0, 110, 260], [1, 0.9, 0]);
+  const mintY = useTransform(scroll, [0, 260], [0, 18]);
 
   const c1mx = useTransform(mx, [-0.5, 0.5], [-14, 14]);
   const c1my = useTransform(my, [-0.5, 0.5], [-6, 6]);
@@ -547,6 +687,31 @@ function HeroScene() {
       >
         <motion.div className="hero-title-wrap" style={{ scale: titleScale, opacity: titleOpacity, x: titleXMouse, y: titleY }}>
           <img className="hero-title-image" src="/assets/hero-title-tight.png" alt="Billionaire Bobo Club" />
+        </motion.div>
+      </motion.div>
+
+      <motion.div
+        className="hero-mint-reveal"
+        initial={{ opacity: 0, y: 18, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 1.05, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <motion.div className="hero-mint-scroll" style={{ opacity: mintOpacity, y: mintY }}>
+          <div className="hero-mint-embed" aria-label="BOBROS mint terminal">
+            <span className="mint-terminal-kicker">LIVE MINT TERMINAL</span>
+
+            <div className="mint-embed-frame">
+              <div id="mint-button-container" className="launchmynft-button-host" />
+              <div className="mint-loading" aria-hidden="true">
+                Connecting mint terminal...
+              </div>
+            </div>
+
+            <div className="mint-counter-shell">
+              <span>LIVE MINTS:</span>
+              <div id="mint-counter" className="launchmynft-counter-host" />
+            </div>
+          </div>
         </motion.div>
       </motion.div>
 
