@@ -564,9 +564,6 @@ function HeroScene() {
 
   const scrollDownOpacity = useTransform(scroll, [0, 95, 210], [1, 0.82, 0]);
   const scrollDownY = useTransform(scroll, [0, 210], [0, 16]);
-  const mintOpacity = useTransform(scroll, [0, 110, 260], [1, 0.9, 0]);
-  const mintY = useTransform(scroll, [0, 260], [0, 18]);
-
   const c1mx = useTransform(mx, [-0.5, 0.5], [-14, 14]);
   const c1my = useTransform(my, [-0.5, 0.5], [-6, 6]);
   const c2mx = useTransform(mx, [-0.5, 0.5], [-16, 16]);
@@ -689,31 +686,6 @@ function HeroScene() {
       >
         <motion.div className="hero-title-wrap" style={{ scale: titleScale, opacity: titleOpacity, x: titleXMouse, y: titleY }}>
           <img className="hero-title-image" src="/assets/hero-title-tight.png" alt="Billionaire Bobo Club" />
-        </motion.div>
-      </motion.div>
-
-      <motion.div
-        className="hero-mint-reveal"
-        initial={{ opacity: 0, y: 18, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 1.05, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <motion.div className="hero-mint-scroll" style={{ opacity: mintOpacity, y: mintY }}>
-          <div className="hero-mint-embed" aria-label="BOBROS mint terminal">
-            <span className="mint-terminal-kicker">LIVE MINT TERMINAL POWERED BY launchmynft.io</span>
-
-            <div className="mint-embed-frame">
-              <div id="mint-button-container" className="launchmynft-button-host" />
-              <div className="mint-loading" aria-hidden="true">
-                Connecting mint terminal...
-              </div>
-            </div>
-
-            <div className="mint-counter-shell">
-              <span>LIVE MINTS:</span>
-              <div id="mint-counter" className="launchmynft-counter-host" />
-            </div>
-          </div>
         </motion.div>
       </motion.div>
 
