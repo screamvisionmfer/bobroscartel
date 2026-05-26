@@ -17,6 +17,8 @@ type LeaderboardEntry = {
 
 type LeaderboardResponse = {
   weekId: string;
+  weekEndsAt?: string;
+  serverTime?: string;
   scope: "weekly" | "all-time";
   playerBestToday: number;
   playerBestWeekly: number;
@@ -48,6 +50,22 @@ function shortenWallet(wallet: string) {
   if (wallet.length <= 12) return wallet;
 
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
+function getResetCountdown(weekEndsAt?: string, serverTime?: string) {
+  if (!weekEndsAt) return "--";
+
+  const end = Date.parse(weekEndsAt);
+  const start = serverTime ? Date.parse(serverTime) : Date.now();
+
+  if (!Number.isFinite(end) || !Number.isFinite(start)) return "--";
+
+  const totalMinutes = Math.max(0, Math.floor((end - start) / 60_000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${days}d ${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey: number; walletAddress?: string }) {
@@ -84,12 +102,43 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
   }, [refreshKey, walletAddress]);
 
   const visibleEntries = leaderboard?.entries.slice(0, showTopTen ? 10 : 5) ?? [];
+  const resetCountdown = getResetCountdown(leaderboard?.weekEndsAt, leaderboard?.serverTime);
 
   return (
     <aside className={styles.leaderboard} aria-label="Weekly leaderboard">
       <div className={styles.leaderboardHeader}>
-        <span className={styles.kicker}>{leaderboard?.weekId ?? "WEEKLY"} BOUNTY BOARD</span>
+        <span className={styles.kicker}>Current Week: {leaderboard?.weekId ?? "LOADING"}</span>
         <h2>WEEKLY BOUNTY BOARD</h2>
+        <small>Manual review before rewards</small>
+      </div>
+
+      <section className={styles.contestPanel} aria-label="Weekly contest rules">
+        <div>
+          <strong>WEEKLY BOUNTY BOARD</strong>
+          <span>{leaderboard?.weekId ?? "CURRENT WEEK"}</span>
+        </div>
+        <p>
+          <span>#1 weekly score</span>
+          <b>wins 1 Bobros NFT</b>
+        </p>
+        <p>
+          <span>Top 3</span>
+          <b>receive whitelist spots</b>
+        </p>
+        <p>
+          <span>Holder wallet</span>
+          <b>required</b>
+        </p>
+        <p>
+          <span>Entries</span>
+          <b>reviewed before rewards</b>
+        </p>
+        <small>No wallet signature required.</small>
+      </section>
+
+      <div className={styles.weekReset}>
+        <span>Resets in</span>
+        <strong>{resetCountdown}</strong>
       </div>
 
       <div className={styles.playerBest}>
@@ -125,18 +174,18 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
       <section className={styles.rewardPanel} aria-label="Weekly rewards">
         <h3>WEEKLY REWARDS</h3>
         <p>
+          <span>#1</span>
+          <strong>1 Bobros NFT</strong>
+        </p>
+        <p>
           <span>Top 3</span>
-          <strong>Featured on weekly board</strong>
+          <strong>Whitelist spots</strong>
         </p>
         <p>
-          <span>Top 10</span>
-          <strong>Raffle entry</strong>
+          <span>Holder</span>
+          <strong>Wallet required</strong>
         </p>
-        <p>
-          <span>1M+ MCAP</span>
-          <strong>Bonus raffle entry</strong>
-        </p>
-        <small>Rewards reset weekly. Entries are reviewed before rewards are distributed.</small>
+        <small>Rewards reset weekly. Entries are reviewed before rewards are distributed. No wallet signature required.</small>
       </section>
     </aside>
   );

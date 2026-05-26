@@ -5,7 +5,8 @@ import styles from "./Game.module.css";
 
 const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
-const gameShareUrl = "https://www.bobroscartel.lol/game";
+const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
 const legacyPlayerAssetPath = "/game/bobro-head.png";
 const headAssetPaths = {
   "bobro-head": "/game/heads/bobro-head.png",
@@ -515,6 +516,14 @@ function shortenWallet(wallet: string) {
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
 }
 
+function normalizeWalletInput(value: string) {
+  return value.trim().replace(/\s+/g, "");
+}
+
+function isLikelySolanaWalletAddress(value: string) {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
+}
+
 function localDateKey() {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -554,6 +563,14 @@ function pushFloatingText(world: World, text: string, x: number, y: number, colo
 
 function getDifficulty(altitude: number) {
   return clamp(altitude / 22000, 0, 1);
+}
+
+function isMobileWorldWidth(width: number) {
+  return width <= 430;
+}
+
+function isMobileWorld(world: Pick<World, "width">) {
+  return isMobileWorldWidth(world.width);
 }
 
 function getStage(score: number): StageLabel {
@@ -726,19 +743,23 @@ function routePlatformKind(world: World, forceEasy: boolean): PlatformKind {
   return pathPlatformKind(world.nextPlatformY, forceEasy);
 }
 
-function platformGapRange(altitude: number) {
-  if (altitude < 10000) return { min: 110, max: 150 };
-  if (altitude < 25000) return { min: 130, max: 175 };
-  if (altitude < 50000) return { min: 150, max: 200 };
-  return { min: 170, max: 225 };
+function platformGapRange(altitude: number, mobile = false) {
+  const mobileBump = mobile ? 12 : 0;
+
+  if (altitude < 10000) return { min: 110 + mobileBump, max: 150 + mobileBump };
+  if (altitude < 25000) return { min: 130 + mobileBump, max: 175 + mobileBump };
+  if (altitude < 50000) return { min: 150 + mobileBump, max: 200 + mobileBump };
+  return { min: 170 + mobileBump, max: 225 + mobileBump };
 }
 
-function nextPlatformGap(altitude: number, forceSafe = false) {
+function nextPlatformGap(world: World, altitude: number, forceSafe = false) {
+  const mobile = isMobileWorld(world);
+
   if (forceSafe) {
-    return randomBetween(106, 132);
+    return mobile ? randomBetween(116, 142) : randomBetween(106, 132);
   }
 
-  const range = platformGapRange(altitude);
+  const range = platformGapRange(altitude, mobile);
 
   return randomBetween(range.min, range.max);
 }
@@ -907,10 +928,18 @@ function createPlatform(
   panicRed = false,
 ): Platform {
   const difficulty = getDifficulty(y);
+  const mobile = isMobileWorldWidth(worldWidth);
   const kind = kindOverride ?? (forceSafe ? pathPlatformKind(y, forceEasyPath) : weightedPlatformKind(difficulty, forceSafe, y));
-  const safeWidth = y >= 50000 ? randomBetween(88, 104) : y >= 25000 ? randomBetween(96, 112) : randomBetween(112, 132);
-  const baseWidth = forceSafe ? safeWidth : clamp(116 - difficulty * 24 + Math.random() * 16, 82, 126);
-  const width = kind === "cash-stack" ? baseWidth + 12 : kind === "solana" ? Math.max(112, baseWidth + 18) : baseWidth;
+  const safeWidthBase = y >= 50000 ? randomBetween(88, 104) : y >= 25000 ? randomBetween(96, 112) : randomBetween(112, 132);
+  const safeWidth = mobile ? Math.max(70, safeWidthBase - 22) : safeWidthBase;
+  const baseWidthRaw = forceSafe ? safeWidth : clamp(116 - difficulty * 24 + Math.random() * 16, 82, 126);
+  const baseWidth = mobile ? Math.max(66, baseWidthRaw - 18) : baseWidthRaw;
+  const width =
+    kind === "cash-stack"
+      ? baseWidth + (mobile ? 8 : 12)
+      : kind === "solana"
+        ? Math.max(mobile ? 96 : 112, baseWidth + (mobile ? 12 : 18))
+        : baseWidth;
   const maxHorizontalStep = forceSafe ? Math.min(worldWidth * 0.44, 72 + difficulty * 92) : Math.min(worldWidth * 0.46, 86 + difficulty * 56);
   const minHorizontalStep = forceSafe ? 24 + difficulty * 30 : 0;
   const rawStep = (Math.random() * 2 - 1) * maxHorizontalStep;
@@ -1048,15 +1077,17 @@ function maybeAddSupplementalPlatforms(world: World, previousPath: Platform | un
   if (forceEasy || !previousPath) return;
 
   const bandIndex = world.pathBandIndex;
-  if (bandIndex - world.lastOptionalBandIndex < 2) return;
+  const mobile = isMobileWorld(world);
+  const minOptionalBandGap = mobile ? 3 : 2;
+  if (bandIndex - world.lastOptionalBandIndex < minOptionalBandGap) return;
 
   const difficulty = getDifficulty(nextPath.y);
   const tier = getBiomeTier(world);
   const introActive = bandIndex < world.introChaosBands && world.introOptionalQueue.length > 0;
   const lateChaosChance = tier >= 5 ? 0.12 + tier * 0.018 : 0;
   const chance = isMarketCrashActive(world)
-    ? optionalPlatformChance(nextPath.y) * 0.48
-    : clamp(optionalPlatformChance(nextPath.y) + lateChaosChance, 0, 0.72);
+    ? optionalPlatformChance(nextPath.y) * (mobile ? 0.34 : 0.48)
+    : clamp((optionalPlatformChance(nextPath.y) + lateChaosChance) * (mobile ? 0.72 : 1), 0, mobile ? 0.58 : 0.72);
   if (!introActive && Math.random() > chance) return;
 
   const bandStart = previousPath.y + 36;
@@ -1349,7 +1380,7 @@ function addNextPlatform(world: World, forceEasy = false) {
   world.nextPlatformId += 1;
   maybeAddSupplementalPlatforms(world, previousPath, platform, forceEasy);
   world.pathBandIndex += 1;
-  world.nextPlatformY = platform.y + nextPlatformGap(platform.y, forceEasy);
+  world.nextPlatformY = platform.y + nextPlatformGap(world, platform.y, forceEasy);
 }
 
 function ensurePlatformBuffer(world: World) {
@@ -1368,14 +1399,16 @@ function ensurePlatformBuffer(world: World) {
 
 function createWorld(width = defaultWidth, height = defaultHeight, status: WorldStatus = "ready"): World {
   const firstPlatformCenter = width / 2;
+  const mobile = isMobileWorldWidth(width);
+  const firstPlatformWidth = mobile ? 112 : 136;
   const platforms: Platform[] = [
     {
       id: 0,
-      x: firstPlatformCenter - 68,
+      x: firstPlatformCenter - firstPlatformWidth / 2,
       y: 74,
-      baseX: firstPlatformCenter - 68,
+      baseX: firstPlatformCenter - firstPlatformWidth / 2,
       baseY: 74,
-      width: 136,
+      width: firstPlatformWidth,
       height: 20,
       kind: "cash-stack",
       state: "solid",
@@ -1413,7 +1446,7 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
     honeyLife: null,
     mumu: null,
     mumu2: null,
-    nextPlatformY: 190,
+    nextPlatformY: mobile ? 202 : 190,
     nextPlatformId: 1,
     nextCollectibleId: 1,
     nextHoneyLifeId: 1,
@@ -1457,7 +1490,7 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
     lastOptionalBandIndex: -2,
     emergencyPlatformCooldownUntil: 0,
     introOptionalQueue: createIntroOptionalQueue(),
-    introChaosBands: 16,
+    introChaosBands: mobile ? 12 : 16,
     platformLandings: 0,
     nextOnFireLandingTarget: 50,
     onFireUntil: 0,
@@ -1977,7 +2010,7 @@ function createReachablePathPlatform(world: World) {
   }
 
   if (platform.y >= world.nextPlatformY - 8) {
-    world.nextPlatformY = platform.y + nextPlatformGap(platform.y);
+    world.nextPlatformY = platform.y + nextPlatformGap(world, platform.y);
   }
 
   return platform;
@@ -3680,6 +3713,13 @@ function getBrowserSolanaProvider() {
   return (window as Window & { solana?: SolanaWalletProvider }).solana;
 }
 
+function getGameShareUrl() {
+  if (configuredSiteUrl) return `${configuredSiteUrl}/game`;
+  if (typeof window !== "undefined") return `${window.location.origin}/game`;
+
+  return fallbackGameShareUrl;
+}
+
 async function connectWallet() {
   const provider = getBrowserSolanaProvider();
 
@@ -3727,6 +3767,7 @@ export default function BobroToTheMoon({
   const [modeChosen, setModeChosen] = useState(false);
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("idle");
   const [walletAddress, setWalletAddress] = useState("");
+  const [manualWalletAddress, setManualWalletAddress] = useState("");
   const [bobrosCount, setBobrosCount] = useState(0);
   const [accessMessage, setAccessMessage] = useState("");
   const [runSessionMessage, setRunSessionMessage] = useState("");
@@ -3881,12 +3922,42 @@ export default function BobroToTheMoon({
     window.localStorage.setItem(getHeadStorageKey(walletAddress), head);
   }, [bestUnlockScore, mode, walletAddress]);
 
+  const activateHolderAccess = useCallback(
+    (wallet: string, count: number) => {
+      setMode("holder");
+      setModeChosen(true);
+      setWalletStatus("holder");
+      setWalletAddress(wallet);
+      setManualWalletAddress(wallet);
+      setBobrosCount(count);
+      setAccessMessage(`Holder mode active: ${count} Bobro detected.`);
+      loadProgressForMode("holder", wallet);
+      onAccessChange?.({ mode: "holder", wallet });
+    },
+    [loadProgressForMode, onAccessChange],
+  );
+
+  const activateGuestAccess = useCallback(
+    (message: string, status: WalletStatus = "denied") => {
+      setMode("guest");
+      setModeChosen(true);
+      setWalletStatus(status);
+      setBobrosCount(0);
+      setSelectedHead("bobro-head");
+      setAccessMessage(message);
+      loadProgressForMode("guest");
+      onAccessChange?.({ mode: "guest" });
+    },
+    [loadProgressForMode, onAccessChange],
+  );
+
   const playAsGuest = useCallback(() => {
     setMode("guest");
     setModeChosen(true);
     setWalletStatus("idle");
     setAccessMessage("Guest run — scores are local only.");
     setWalletAddress("");
+    setManualWalletAddress("");
     setBobrosCount(0);
     setSelectedHead("bobro-head");
     loadProgressForMode("guest");
@@ -3902,29 +3973,17 @@ export default function BobroToTheMoon({
     try {
       const wallet = await connectWallet();
       setWalletAddress(wallet);
+      setManualWalletAddress(wallet);
       setWalletStatus("checking");
 
       const holder = await checkHolder(wallet);
 
       if (holder.isHolder) {
-        setMode("holder");
-        setModeChosen(true);
-        setWalletStatus("holder");
-        setBobrosCount(holder.bobrosCount);
-        setAccessMessage(`Holder mode active: ${holder.bobrosCount} Bobro detected.`);
-        loadProgressForMode("holder", wallet);
-        onAccessChange?.({ mode: "holder", wallet });
+        activateHolderAccess(wallet, holder.bobrosCount);
         return;
       }
 
-      setMode("guest");
-      setModeChosen(true);
-      setWalletStatus("denied");
-      setBobrosCount(0);
-      setSelectedHead("bobro-head");
-      setAccessMessage("NO BOBRO NFT DETECTED. You can still play as guest.");
-      loadProgressForMode("guest");
-      onAccessChange?.({ mode: "guest" });
+      activateGuestAccess("NO BOBRO NFT DETECTED. You can still play as guest.");
     } catch {
       setMode("guest");
       setModeChosen(false);
@@ -3932,7 +3991,41 @@ export default function BobroToTheMoon({
       setAccessMessage("Wallet check unavailable. You can still play as guest.");
       onAccessChange?.({ mode: "guest" });
     }
-  }, [loadProgressForMode, onAccessChange, walletStatus]);
+  }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
+
+  const checkEnteredWalletAddress = useCallback(async () => {
+    if (walletStatus === "connecting" || walletStatus === "checking") return;
+
+    const wallet = normalizeWalletInput(manualWalletAddress);
+    setManualWalletAddress(wallet);
+
+    if (!isLikelySolanaWalletAddress(wallet)) {
+      setWalletStatus("error");
+      setAccessMessage("Paste a valid Solana wallet address.");
+      return;
+    }
+
+    setWalletAddress(wallet);
+    setWalletStatus("checking");
+    setAccessMessage("");
+
+    try {
+      const holder = await checkHolder(wallet);
+
+      if (holder.isHolder) {
+        activateHolderAccess(wallet, holder.bobrosCount);
+        return;
+      }
+
+      activateGuestAccess("NO BOBRO NFT DETECTED. You can still play as guest.");
+    } catch {
+      setMode("guest");
+      setModeChosen(false);
+      setWalletStatus("error");
+      setAccessMessage("Wallet check unavailable. You can still play as guest.");
+      onAccessChange?.({ mode: "guest" });
+    }
+  }, [activateGuestAccess, activateHolderAccess, manualWalletAddress, onAccessChange, walletStatus]);
 
   const recordRunResult = useCallback(
     (world: World) => {
@@ -4020,7 +4113,7 @@ export default function BobroToTheMoon({
   const saveRunToBountyBoard = useCallback(async () => {
     if (!runResult || saveStatus === "saving" || runResult.saved) return;
     if (mode !== "holder") {
-      setNameError("CONNECT BOBRO WALLET TO SAVE SCORE");
+      setNameError("Holder wallet required for weekly rewards.");
       return;
     }
     if (!runResult.leaderboardEligible || !runResult.runId) {
@@ -4081,7 +4174,12 @@ export default function BobroToTheMoon({
   const shareRunOnX = useCallback(() => {
     if (!runResult) return;
 
-    const tweetText = `I helped Bobo reach ${formatMarketCap(runResult.score)} MCAP in Bobro To The Moon.\nCan you beat my run?\n${gameShareUrl}`;
+    const shareUrl = getGameShareUrl();
+    const scoreText = formatMarketCap(runResult.score);
+    const tweetText = runResult.saved
+      ? `I just submitted ${scoreText} MCAP on Bobros To The Moon 🚀 Weekly #1 wins a Bobros NFT. Top 3 get whitelist. Play: ${shareUrl}`
+      : `I helped Bobo reach ${scoreText} MCAP in Bobro To The Moon.\nCan you beat my run?\n${shareUrl}`;
+
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank", "noopener,noreferrer");
   }, [runResult]);
 
@@ -4528,7 +4626,37 @@ export default function BobroToTheMoon({
                     {walletStatus === "connecting" ? "CONNECTING..." : walletStatus === "checking" ? "CHECKING..." : "CONNECT WALLET"}
                   </button>
                 </div>
-                <small>Read-only wallet check. No transaction. No spending approval.</small>
+                <label className={styles.walletEntry}>
+                  <span>ENTER WALLET ADDRESS</span>
+                  <div>
+                    <input
+                      type="text"
+                      inputMode="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="Paste Solana wallet"
+                      value={manualWalletAddress}
+                      onChange={(event) => setManualWalletAddress(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void checkEnteredWalletAddress();
+                        }
+                      }}
+                    />
+                    <button
+                      className={styles.startButton}
+                      type="button"
+                      onClick={checkEnteredWalletAddress}
+                      disabled={walletStatus === "connecting" || walletStatus === "checking"}
+                    >
+                      {walletStatus === "checking" ? "CHECKING..." : "CHECK"}
+                    </button>
+                  </div>
+                </label>
+                <small>No wallet signature required. No transaction.</small>
+                <small>Paste mode needs no wallet approval.</small>
+                <small>We only check whether the wallet holds a Bobros NFT.</small>
                 {accessMessage ? (
                   <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                 ) : modeChosen && mode === "guest" ? (
@@ -4575,7 +4703,7 @@ export default function BobroToTheMoon({
                     />
                   </label>
                 ) : (
-                  <small className={styles.guestNote}>CONNECT BOBRO WALLET TO SAVE SCORE</small>
+                  <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
                 )}
                 {nameError ? <small className={styles.formError}>{nameError}</small> : null}
                 {runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
@@ -4633,10 +4761,10 @@ export default function BobroToTheMoon({
             {hud.status === "dead" && result ? (
               <div className={styles.deathActions}>
                 <button className={styles.startButton} type="button" onClick={saveRunToBountyBoard} disabled={!canSaveRun || saveStatus === "saving" || result.saved}>
-                  {canSaveRun ? saveButtonLabel : "CONNECT BOBRO WALLET TO SAVE SCORE"}
+                  {canSaveRun ? saveButtonLabel : "HOLDER WALLET REQUIRED"}
                 </button>
                 <button className={styles.startButton} type="button" onClick={shareRunOnX}>
-                  SHARE ON X
+                  {result.saved ? "SHARE SCORE ON X" : "SHARE ON X"}
                 </button>
                 <button className={styles.startButton} type="button" onClick={downloadScoreCard}>
                   DOWNLOAD SCORE CARD

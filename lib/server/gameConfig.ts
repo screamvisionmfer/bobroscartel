@@ -58,3 +58,15 @@ export function getUtcWeekId(date = new Date()) {
 
   return `${utcDate.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
+
+export function getUtcWeekEndsAt(date = new Date()) {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = utcDate.getUTCDay() || 7;
+  const weekStart = new Date(utcDate);
+  weekStart.setUTCDate(utcDate.getUTCDate() - day + 1);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
+
+  return weekEnd.toISOString();
+}

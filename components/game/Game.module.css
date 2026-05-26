@@ -20,6 +20,19 @@
   background: transparent;
   font-family: "Courier New", monospace;
   isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.gamePage button,
+.gamePage a,
+.gamePage canvas,
+.gamePage input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gamePage input {
+  user-select: text;
 }
 
 .gameClouds {
@@ -497,6 +510,58 @@
   font-size: 0.62rem;
 }
 
+.walletEntry {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.34rem;
+  border: 2px solid rgba(0, 0, 0, 0.48);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.24);
+  color: var(--game-ink);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.walletEntry span {
+  color: #416c2d;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.walletEntry div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.28rem;
+  align-items: center;
+}
+
+.walletEntry input {
+  width: 100%;
+  min-width: 0;
+  height: 2.05rem;
+  padding: 0.34rem 0.54rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  color: var(--game-ink);
+  background: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 900;
+  outline: none;
+}
+
+.walletEntry input:focus {
+  box-shadow: 0 0 0 3px rgba(242, 199, 58, 0.38);
+}
+
+.walletEntry .startButton {
+  min-width: 4.8rem;
+  min-height: 2.05rem;
+  padding: 0.34rem 0.52rem;
+  font-size: 0.58rem;
+}
+
 .modeChooser small,
 .guestNote {
   color: rgba(33, 22, 15, 0.7);
@@ -854,9 +919,92 @@
   text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.72);
 }
 
+.leaderboardHeader small {
+  display: inline-flex;
+  margin-top: 0.28rem;
+  color: rgba(33, 22, 15, 0.62);
+  font-size: 0.62rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .leaderboardList {
   display: grid;
   gap: 0.38rem;
+}
+
+.contestPanel,
+.weekReset {
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(242, 199, 58, 0.12)),
+    rgba(255, 255, 255, 0.24);
+}
+
+.contestPanel {
+  display: grid;
+  gap: 0.32rem;
+  padding: 0.55rem 0.62rem;
+}
+
+.contestPanel div,
+.weekReset {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.contestPanel div strong {
+  color: var(--game-ink);
+  font-size: 0.76rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.contestPanel div span,
+.weekReset span {
+  color: #416c2d;
+  font-size: 0.62rem;
+  line-height: 1;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.contestPanel p {
+  display: grid;
+  grid-template-columns: minmax(5.4rem, 0.64fr) minmax(0, 1fr);
+  gap: 0.4rem;
+  margin: 0;
+  color: rgba(33, 22, 15, 0.66);
+  font-size: 0.62rem;
+  line-height: 1.12;
+  text-transform: uppercase;
+}
+
+.contestPanel b {
+  color: var(--game-ink);
+}
+
+.contestPanel small {
+  color: rgba(33, 22, 15, 0.58);
+  font-size: 0.58rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.weekReset {
+  padding: 0.42rem 0.62rem;
+  color: var(--game-ink);
+}
+
+.weekReset strong {
+  color: #a56d10;
+  font-size: 0.78rem;
+  line-height: 1;
+  text-align: right;
+  text-transform: uppercase;
 }
 
 .playerBest {
@@ -1004,8 +1152,8 @@
   }
 
   .gameCanvas {
-    height: min(62svh, 560px);
-    min-height: 430px;
+    height: min(70svh, 660px);
+    min-height: 500px;
   }
 
   .leaderboard {
@@ -1018,34 +1166,37 @@
 @media (max-width: 760px) {
   .gamePage {
     min-height: 100svh;
-    gap: 0.6rem;
-    padding: 0.58rem;
+    gap: 0.38rem;
+    padding: 0.36rem;
+    overscroll-behavior: none;
   }
 
   .gameHeaderStrip {
-    min-height: 66px;
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 0.45rem 0.55rem;
+    min-height: 52px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.34rem;
+    padding: 0.3rem 0.4rem;
   }
 
   .gameLogoLink {
-    width: 4rem;
+    width: 3.2rem;
   }
 
   .gameHeaderStrip h1 {
-    font-size: clamp(1.7rem, 10vw, 2.35rem);
+    font-size: clamp(1.35rem, 7.5vw, 1.9rem);
   }
 
   .gameHeaderStrip p {
-    font-size: 0.68rem;
+    display: none;
   }
 
   .backLink {
-    grid-column: 1 / -1;
-    justify-self: start;
-    min-height: 2rem;
-    padding: 0.45rem 0.62rem;
-    font-size: 0.68rem;
+    grid-column: auto;
+    justify-self: end;
+    min-height: 1.75rem;
+    padding: 0.34rem 0.44rem;
+    font-size: 0.54rem;
+    white-space: nowrap;
   }
 
   .gateCard {
@@ -1053,20 +1204,35 @@
   }
 
   .gameCabinet {
-    padding: 0.58rem;
+    padding: 0.36rem;
+    outline-offset: -6px;
   }
 
   .gameHud {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.2rem;
+    margin-bottom: 0.28rem;
+    padding: 0.22rem;
   }
 
   .hudCell:nth-child(5) {
-    grid-column: 1 / -1;
+    grid-column: auto;
+  }
+
+  .hudCell {
+    gap: 0.08rem;
+    padding: 0.2rem 0.16rem;
+    border-width: 1.5px;
+    font-size: 0.43rem;
+  }
+
+  .hudCell strong {
+    font-size: 0.58rem;
   }
 
   .gameCanvas {
-    height: min(54svh, 470px);
-    min-height: 330px;
+    height: clamp(450px, 72svh, 650px);
+    min-height: 0;
   }
 
   .gameOverlay {
@@ -1111,6 +1277,32 @@
     min-height: 2.05rem;
     padding: 0.34rem 0.36rem;
     font-size: 0.52rem;
+  }
+
+  .walletEntry {
+    padding: 0.28rem;
+    gap: 0.18rem;
+  }
+
+  .walletEntry span {
+    font-size: 0.5rem;
+  }
+
+  .walletEntry div {
+    gap: 0.22rem;
+  }
+
+  .walletEntry input {
+    height: 1.92rem;
+    padding-inline: 0.46rem;
+    font-size: 0.52rem;
+  }
+
+  .walletEntry .startButton {
+    min-width: 4.15rem;
+    min-height: 1.92rem;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.5rem;
   }
 
   .skinSelectedPreview {

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { formatMcap, getUtcWeekId } from "./gameConfig";
+import { formatMcap, getUtcWeekEndsAt, getUtcWeekId } from "./gameConfig";
 import { getRedis } from "./redis";
 
 export type LeaderboardEntry = {
@@ -203,7 +203,10 @@ async function setRedisBestScore(key: string, score: number) {
 }
 
 export async function getLeaderboard(wallet?: string, scope: "weekly" | "all-time" = "weekly") {
-  const weekId = getUtcWeekId();
+  const now = new Date();
+  const weekId = getUtcWeekId(now);
+  const weekEndsAt = getUtcWeekEndsAt(now);
+  const serverTime = now.toISOString();
   const redis = getRedis();
 
   if (!redis) {
@@ -212,6 +215,8 @@ export async function getLeaderboard(wallet?: string, scope: "weekly" | "all-tim
 
     return {
       weekId,
+      weekEndsAt,
+      serverTime,
       scope,
       playerBestToday: getMemoryPlayerBest(wallet, scope === "weekly" ? weekId : undefined),
       playerBestWeekly: getMemoryPlayerBest(wallet, weekId),
@@ -223,6 +228,8 @@ export async function getLeaderboard(wallet?: string, scope: "weekly" | "all-tim
 
   return {
     weekId,
+    weekEndsAt,
+    serverTime,
     scope,
     playerBestToday: wallet ? await getRedisBestScore(scope === "weekly" ? leaderboardKeys.weeklyBest(weekId, wallet) : leaderboardKeys.allTimeBest(wallet)) : 0,
     playerBestWeekly: wallet ? await getRedisBestScore(leaderboardKeys.weeklyBest(weekId, wallet)) : 0,
