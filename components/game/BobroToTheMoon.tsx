@@ -17,6 +17,7 @@ const headAssetPaths = {
   skelebobo: "/game/heads/skelebobo.png",
   diamondbobo: "/game/heads/diamondbobo.png",
   "og-rekt": "/game/heads/og-rekt.png",
+  theoneape: "/game/heads/theoneape.png",
 } as const;
 const backgroundAssetPaths = {
   backalley: "/game/backgrounds/bg-01-backalley.webp",
@@ -39,7 +40,9 @@ const platformAssetPaths = {
   solana: "/game/assets/solana.png",
 } as const;
 const mumuAssetPath = "/game/assets/mumu.png";
-const honeyLifeAssetPath = platformAssetPaths["honey-jar"];
+const evilMumuAssetPath = "/game/assets/evil-mumu.png";
+const honeyLifeAssetPath = "/game/assets/honey.png";
+const jetpackAssetPath = "/game/assets/jetpack.png";
 
 const deathMessages = [
   "HE BOUGHT THE TOP.",
@@ -82,12 +85,13 @@ const stageLabels = [
 ] as const;
 const headOptions = [
   { key: "bobro-head", label: "BOBRO", unlockAt: 0, src: headAssetPaths["bobro-head"] },
-  { key: "bobohazard", label: "HAZARD", unlockAt: 5_000_000, src: headAssetPaths.bobohazard },
-  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 10_000_000, src: headAssetPaths["high-bobo"] },
-  { key: "luchador", label: "LUCHADOR", unlockAt: 30_000_000, src: headAssetPaths.luchador },
-  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 250_000_000, src: headAssetPaths.skelebobo },
-  { key: "diamondbobo", label: "DIAMOND BOBO", unlockAt: 4_000_000_000, src: headAssetPaths.diamondbobo },
-  { key: "og-rekt", label: "OG REKT", unlockAt: 6_900_000_000, src: headAssetPaths["og-rekt"] },
+  { key: "bobohazard", label: "HAZARD", unlockAt: 50_000_000, src: headAssetPaths.bobohazard },
+  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 100_000_000, src: headAssetPaths["high-bobo"] },
+  { key: "luchador", label: "LUCHADOR", unlockAt: 500_000_000, src: headAssetPaths.luchador },
+  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 4_000_000_000, src: headAssetPaths.skelebobo },
+  { key: "diamondbobo", label: "DIAMOND", unlockAt: 8_000_000_000, src: headAssetPaths.diamondbobo },
+  { key: "og-rekt", label: "OG REKT", unlockAt: 69_000_000_000, src: headAssetPaths["og-rekt"] },
+  { key: "theoneape", label: "The JB Ape", unlockAt: 420_000_000_000, src: headAssetPaths["theoneape"] },
 ] as const;
 function getWalletStorageId(wallet = "") {
   return wallet ? wallet.replace(/[^a-zA-Z0-9]/g, "").slice(0, 44) : "unknown-wallet";
@@ -134,7 +138,9 @@ type LoadedAssets = {
   backgrounds: ImageMap<BackgroundKey>;
   platforms: ImageMap<PlatformKind>;
   honeyLife: HTMLImageElement | null;
+  jetpack: HTMLImageElement | null;
   mumu: HTMLImageElement | null;
+  evilMumu: HTMLImageElement | null;
 };
 
 type FloatingText = {
@@ -395,7 +401,7 @@ const jetpackVelocity = 1620;
 const jetpackBoostDuration = 0.62;
 const onFireDuration = 5;
 const marketCrashDuration = 10;
-const mumuUnlockScore = 20000;
+const mumuUnlockScore = 300000;
 const mumuWarningDuration = 0.58;
 const honeyLifeMilestoneInterval = 1_000_000;
 const honeyLifeMax = 3;
@@ -2150,8 +2156,8 @@ function activateOnFire(world: World, playAudioCue?: (cue: GameAudioCue) => void
   world.cameraKick = Math.max(world.cameraKick, 8);
   triggerHitStop(world, 0.05);
   addPaperParticles(world, world.player.x, world.player.y, "#e05b2d", 16, 1.5);
-  triggerNotice(world, "ON FIRE", 1.5);
-  pushFloatingText(world, "ON FIRE", world.player.x, world.player.y + 48, "#e05b2d");
+  triggerNotice(world, "BOBOCLAAAAAT MODE", 1.5);
+  pushFloatingText(world, "BOBOCLAAAAAT MODE", world.player.x, world.player.y + 48, "#e05b2d");
   playAudioCue?.("onFire");
 }
 
@@ -2329,7 +2335,7 @@ function updateWorld(
         platform.state = "breaking";
         platform.breakStartedAt = world.time;
         ensureReachablePathPlatform(world);
-        nextJumpVelocity = jumpVelocity * 0.92;
+        nextJumpVelocity = jumpVelocity * 0.62;
         world.shakePower = Math.max(world.shakePower, 4);
         reactToLanding(world, platform, "#d4aa4c", 0.08, 6);
         triggerNotice(world, "RUG!", 1.05);
@@ -2339,7 +2345,7 @@ function updateWorld(
 
       if (platform.kind === "honey-jar") {
         world.scoreMultiplierUntil = Math.max(world.scoreMultiplierUntil, world.time + 4);
-        nextJumpVelocity = jumpVelocity * 1.02;
+        nextJumpVelocity = jumpVelocity * 1.22;
         world.shakePower = Math.max(world.shakePower, 2);
         world.flashPower = Math.max(world.flashPower, 0.2);
         reactToLanding(world, platform, "#e4b745", 0.055, 5);
@@ -2934,8 +2940,8 @@ function drawPlatform(context: CanvasRenderingContext2D, world: World, platform:
       "green-candle": { widthPad: 16, height: 38, yOffset: 14 },
       "red-candle": { widthPad: 16, height: 38, yOffset: 14 },
       rug: { widthPad: 18, height: 42, yOffset: 16 },
-      "honey-jar": { widthPad: 18, height: 44, yOffset: 17 },
-      "cash-stack": { widthPad: 26, height: 58, yOffset: 22 },
+      "honey-jar": { widthPad: 20, height: 38, yOffset: 17 },
+      "cash-stack": { widthPad: 16, height: 48, yOffset: 22 },
       solana: { widthPad: 18, height: 40, yOffset: 15 },
     };
     const box = spriteScale[platform.kind];
@@ -3021,7 +3027,12 @@ function drawPlatform(context: CanvasRenderingContext2D, world: World, platform:
   context.restore();
 }
 
-function drawJetpack(context: CanvasRenderingContext2D, world: World, collectible: Collectible) {
+function drawJetpack(
+  context: CanvasRenderingContext2D,
+  world: World,
+  collectible: Collectible,
+  image?: HTMLImageElement | null,
+) {
   const y = screenY(world, collectible.y);
 
   if (y < -70 || y > world.height + 70) return;
@@ -3031,35 +3042,40 @@ function drawJetpack(context: CanvasRenderingContext2D, world: World, collectibl
   context.save();
   context.translate(collectible.x, y + bob);
 
-  context.globalAlpha = 0.18 + Math.sin(world.time * 7 + collectible.phase) * 0.04;
-  context.fillStyle = "#e4b745";
-  context.fillRect(-23, -27, 46, 54);
+  if (image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+    context.drawImage(image, -26, -30, 52, 60);
+  } else {
+    context.globalAlpha = 0.18 + Math.sin(world.time * 7 + collectible.phase) * 0.04;
+    context.fillStyle = "#e4b745";
+    context.fillRect(-23, -27, 46, 54);
 
-  context.globalAlpha = 1;
-  context.fillStyle = "#f4e4b2";
-  context.fillRect(-13, -18, 26, 30);
-  context.strokeStyle = "#130e0c";
-  context.lineWidth = 3;
-  context.strokeRect(-13, -18, 26, 30);
+    context.globalAlpha = 1;
+    context.fillStyle = "#f4e4b2";
+    context.fillRect(-13, -18, 26, 30);
+    context.strokeStyle = "#130e0c";
+    context.lineWidth = 3;
+    context.strokeRect(-13, -18, 26, 30);
 
-  context.fillStyle = "#b94b3e";
-  context.fillRect(-20, -11, 9, 30);
-  context.fillRect(11, -11, 9, 30);
-  context.strokeRect(-20, -11, 9, 30);
-  context.strokeRect(11, -11, 9, 30);
+    context.fillStyle = "#b94b3e";
+    context.fillRect(-20, -11, 9, 30);
+    context.fillRect(11, -11, 9, 30);
+    context.strokeRect(-20, -11, 9, 30);
+    context.strokeRect(11, -11, 9, 30);
 
-  context.fillStyle = "#8ba65b";
-  context.fillRect(-7, -25, 14, 9);
-  context.strokeRect(-7, -25, 14, 9);
+    context.fillStyle = "#8ba65b";
+    context.fillRect(-7, -25, 14, 9);
+    context.strokeRect(-7, -25, 14, 9);
 
-  context.fillStyle = "#e4b745";
-  context.fillRect(-15, 20, 8, 11 + Math.sin(world.time * 10) * 3);
-  context.fillRect(7, 20, 8, 11 + Math.cos(world.time * 10) * 3);
-  context.fillStyle = "#130e0c";
-  context.font = "700 8px Courier New, monospace";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText("JET", 0, -1);
+    context.fillStyle = "#e4b745";
+    context.fillRect(-15, 20, 8, 11 + Math.sin(world.time * 10) * 3);
+    context.fillRect(7, 20, 8, 11 + Math.cos(world.time * 10) * 3);
+    context.fillStyle = "#130e0c";
+    context.font = "700 8px Courier New, monospace";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("JET", 0, -1);
+  }
+
   context.restore();
 }
 
@@ -3087,11 +3103,11 @@ function drawRedPill(context: CanvasRenderingContext2D, world: World, collectibl
   context.restore();
 }
 
-function drawCollectibles(context: CanvasRenderingContext2D, world: World) {
+function drawCollectibles(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets) {
   for (const collectible of world.collectibles) {
     if (!collectible.collected) {
       if (collectible.kind === "jetpack") {
-        drawJetpack(context, world, collectible);
+        drawJetpack(context, world, collectible, assets.jetpack);
       } else {
         drawRedPill(context, world, collectible);
       }
@@ -3216,13 +3232,28 @@ function drawSingleMumu(context: CanvasRenderingContext2D, world: World, image: 
   context.restore();
 }
 
-function drawMumu(context: CanvasRenderingContext2D, world: World, image: HTMLImageElement | null) {
+function drawMumu(
+  context: CanvasRenderingContext2D,
+  world: World,
+  image: HTMLImageElement | null,
+  evilImage: HTMLImageElement | null,
+) {
   if (world.mumu) {
-    drawSingleMumu(context, world, image, world.mumu);
+    drawSingleMumu(
+      context,
+      world,
+      world.mumu.variant === "red" ? evilImage ?? image : image,
+      world.mumu,
+    );
   }
 
   if (world.mumu2) {
-    drawSingleMumu(context, world, image, world.mumu2);
+    drawSingleMumu(
+      context,
+      world,
+      world.mumu2.variant === "red" ? evilImage ?? image : image,
+      world.mumu2,
+    );
   }
 }
 
@@ -3290,7 +3321,7 @@ function drawOnFireCanvasEffects(context: CanvasRenderingContext2D, world: World
   }
 
   context.globalAlpha = 0.92;
-  drawPixelText(context, "ON FIRE", world.width / 2, world.height * 0.22, 30, "#e4b745");
+  drawPixelText(context, "BOBOCLAAAAAT MODE", world.width / 2, world.height * 0.22, 30, "#e4b745");
   context.restore();
 }
 
@@ -3458,9 +3489,9 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
     drawPlatform(context, world, platform, assets);
   }
 
-  drawCollectibles(context, world);
+  drawCollectibles(context, world, assets);
   drawHoneyLife(context, world, assets.honeyLife ?? assets.platforms["honey-jar"]);
-  drawMumu(context, world, assets.mumu);
+  drawMumu(context, world, assets.mumu, assets.evilMumu);
   drawOnFireCanvasEffects(context, world);
   drawGameParticles(context, world);
   drawPlayer(context, world, resolvePlayerImage(assets, selectedHead));
@@ -3857,7 +3888,7 @@ export default function BobroToTheMoon({
     const world = worldRef.current;
     const displayScore = getDisplayScore(world);
     const statusLabels = [
-      ...(isOnFire(world) ? ["ON FIRE"] : []),
+      ...(isOnFire(world) ? ["BOBOCLAAAAAT MODE"] : []),
       ...(isMarketCrashActive(world) ? ["MARKET PANIC"] : []),
       ...(isIntoxicated(world) ? ["INTOXICATED"] : []),
     ];
@@ -3963,12 +3994,14 @@ export default function BobroToTheMoon({
     let isCancelled = false;
 
     const loadAssets = async () => {
-      const [headEntries, backgroundEntries, platformEntries, honeyLifeImage, mumuImage] = await Promise.all([
+      const [headEntries, backgroundEntries, platformEntries, honeyLifeImage, jetpackImage, mumuImage, evilMumuImage] = await Promise.all([
         Promise.all(Object.entries(headAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         Promise.all(Object.entries(backgroundAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         Promise.all(Object.entries(platformAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         loadCanvasImage(honeyLifeAssetPath),
+        loadCanvasImage(jetpackAssetPath),
         loadCanvasImage(mumuAssetPath),
+        loadCanvasImage(evilMumuAssetPath),
       ]);
 
       if (isCancelled) return;
@@ -3984,7 +4017,9 @@ export default function BobroToTheMoon({
         backgrounds: Object.fromEntries(backgroundEntries.filter((entry) => entry[1])) as ImageMap<BackgroundKey>,
         platforms: Object.fromEntries(platformEntries.filter((entry) => entry[1])) as ImageMap<PlatformKind>,
         honeyLife: honeyLifeImage,
+        jetpack: jetpackImage,
         mumu: mumuImage,
+        evilMumu: evilMumuImage,
       };
       setAssetsLoaded(true);
     };
@@ -4277,9 +4312,16 @@ export default function BobroToTheMoon({
 
     const shareUrl = getGameShareUrl();
     const scoreText = formatMarketCap(runResult.score);
-    const tweetText = runResult.saved
-      ? `I just submitted ${scoreText} MCAP on Bobros To The Moon 🚀 Weekly #1 wins a Bobros NFT. Top 3 get whitelist. Play: ${shareUrl}`
-      : `I helped Bobo reach ${scoreText} MCAP in Bobro To The Moon.\nCan you beat my run?\n${shareUrl}`;
+    const tweetText = `I pushed $BOBO to ${scoreText} MCAP in Bobro To The Moon 🚀
+
+Think you can beat my run?
+
+🏆 Weekly rewards for Bobros holders
+🥇 #1 wins a Bobros NFT
+🎟 Top 3 get whitelist with special Bobros mint price
+
+Play:
+${shareUrl}`;
 
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank", "noopener,noreferrer");
   }, [runResult]);
@@ -4632,7 +4674,7 @@ export default function BobroToTheMoon({
     ? `HOLDER VERIFIED · ${bobrosCount} BOBROS`
     : walletStatus === "denied"
       ? "NO BOBROS FOUND"
-    : walletStatus === "error"
+      : walletStatus === "error"
         ? "CHECK FAILED"
         : modeChosen && mode === "guest"
           ? "GUEST RUN READY"
@@ -4641,9 +4683,8 @@ export default function BobroToTheMoon({
   return (
     <section className={styles.gameCabinet} aria-label="BOBRO TO THE MOON game frame">
       <div
-        className={`${styles.gameHud} ${hud.multiplier > 1 ? styles.gameHudBoosted : ""} ${hud.milestoneActive ? styles.gameHudMilestone : ""} ${
-          hud.statusLabels.includes("INTOXICATED") ? styles.gameHudIntoxicated : ""
-        }`}
+        className={`${styles.gameHud} ${hud.multiplier > 1 ? styles.gameHudBoosted : ""} ${hud.milestoneActive ? styles.gameHudMilestone : ""} ${hud.statusLabels.includes("INTOXICATED") ? styles.gameHudIntoxicated : ""
+          }`}
         aria-live="polite"
       >
         <span className={styles.hudCell}>
@@ -4712,9 +4753,9 @@ export default function BobroToTheMoon({
                 ? hud.deathMessage
                 : hud.status === "paused"
                   ? "HOLD"
-                : hud.status === "countdown"
-                  ? hud.countdownText || "PUMP"
-                  : "BOBRO TO THE MOON"}
+                  : hud.status === "countdown"
+                    ? hud.countdownText || "PUMP"
+                    : "BOBRO TO THE MOON"}
             </h2>
             <p>
               {hud.status === "dead"
@@ -4723,9 +4764,9 @@ export default function BobroToTheMoon({
                   : "GUEST SCORE SAVED LOCALLY. FLEX THE RECEIPT OR RUN IT BACK."
                 : hud.status === "paused"
                   ? "ESC OR P TO RESUME."
-                : hud.status === "countdown"
-                  ? "PUMP IS COMING."
-                  : "HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD."}
+                  : hud.status === "countdown"
+                    ? "PUMP IS COMING."
+                    : "HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD."}
             </p>
             {hud.status === "ready" ? (
               <div className={styles.readyMenu} aria-label="BOBRO TO THE MOON start menu">

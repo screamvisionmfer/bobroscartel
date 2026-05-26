@@ -119,7 +119,7 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
         </div>
         <p>
           <span>#1 weekly score</span>
-          <b>wins 1 Bobros NFT</b>
+          <b>wins 2 Bobros NFT</b>
         </p>
         <p>
           <span>Top 3</span>
@@ -175,7 +175,7 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
         <h3>WEEKLY REWARDS</h3>
         <p>
           <span>#1</span>
-          <strong>1 Bobros NFT</strong>
+          <strong>2 Bobros NFT</strong>
         </p>
         <p>
           <span>Top 3</span>
