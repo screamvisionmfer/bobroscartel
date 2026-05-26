@@ -2,16 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionStyle, type PanInfo, type Variants } from "framer-motion";
+import SiteHeader from "../components/SiteHeader";
 
 const mintUrl = "https://launchmynft.io/mint/bobroscartel";
-
-const navItems = [
-  { label: "Mint", href: mintUrl, external: true },
-  { label: "Collection", href: "#collection" },
-  { label: "$BOBO", href: "#token" },
-  { label: "About", href: "#about" },
-  { label: "Contact", href: "#contact" },
-];
 
 const stats = [
   {
@@ -262,7 +255,7 @@ function Billboard({ style }: { style?: MotionStyle } = {}) {
       </div>
 
       <div className="billboard-button-zone">
-        <a className="billboard-button" href={mintUrl} target="_blank" rel="noreferrer">
+        <a className="billboard-button" href={mintUrl} target="_blank" rel="noopener noreferrer">
           <span>MINT YOUR BOBRO NOW!</span>
         </a>
       </div>
@@ -295,13 +288,13 @@ function AtmInteractive({ style }: { style?: MotionStyle } = {}) {
           <img className="atm-crt-art" src="/assets/bobocrt.png" alt="" aria-hidden="true" draggable={false} />
 
           <div className="atm-socials">
-            <a className="atm-screen-link" href="https://t.me/bobocouncil" target="_blank" rel="noreferrer">
+            <a className="atm-screen-link" href="https://t.me/bobocouncil" target="_blank" rel="noopener noreferrer">
               BOBOCOUNCIL TG
             </a>
-            <a className="atm-screen-link" href="https://x.com/bobocouncil" target="_blank" rel="noreferrer">
+            <a className="atm-screen-link" href="https://x.com/bobocouncil" target="_blank" rel="noopener noreferrer">
               BOBOCOUNCIL X
             </a>
-            <a className="atm-screen-link" href="https://www.bobothebear.io/" target="_blank" rel="noreferrer">
+            <a className="atm-screen-link" href="https://www.bobothebear.io/" target="_blank" rel="noopener noreferrer">
               WEBSITE $BOBO
             </a>
           </div>
@@ -319,7 +312,7 @@ function AtmInteractive({ style }: { style?: MotionStyle } = {}) {
       </div>
 
       <div className="atm-button-overlay">
-        <a className="atm-real-button" href={buyUrl} target="_blank" rel="noreferrer">
+        <a className="atm-real-button" href={buyUrl} target="_blank" rel="noopener noreferrer">
           BUY $BOBO
         </a>
       </div>
@@ -847,39 +840,7 @@ export default function Home() {
       <div className="night-stars" aria-hidden="true" />
       <div className="night-moon" aria-hidden="true" />
 
-      <header className="site-header shell" id="top">
-        <motion.a
-          className="logo-link"
-          href="#top"
-          aria-label="BOBROS home"
-          initial={{ opacity: 0, y: -14, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.08, duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
-          style={{ x: logoX, y: logoY }}
-        >
-          <img className="logo-image" src="/assets/logo.png" alt="BOBROS" />
-        </motion.a>
-
-        <motion.div
-          className="header-actions"
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18, duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
-          style={{ x: navX, y: navY }}
-        >
-          <nav className="nav" aria-label="Main navigation">
-            {navItems.map((item) => (
-              <a key={item.label} href={item.href} target={item.external ? "_blank" : undefined} rel={item.external ? "noreferrer" : undefined}>
-                {item.label}
-              </a>
-            ))}
-          </nav>
-
-          <button className="theme-toggle" type="button" aria-pressed={theme === "night"} onClick={toggleTheme}>
-            {theme === "night" ? "DAY MODE" : "NIGHT MODE"}
-          </button>
-        </motion.div>
-      </header>
+      <SiteHeader logoStyle={{ x: logoX, y: logoY }} navStyle={{ x: navX, y: navY }} theme={theme} onThemeToggle={toggleTheme} />
 
       <HeroScene />
 
@@ -902,7 +863,7 @@ export default function Home() {
             <span>NO FAKE UTILITY</span>
             <span>JUST BOBROS</span>
           </div>
-          <a className="yellow-button" href={mintUrl} target="_blank" rel="noreferrer">
+          <a className="yellow-button" href={mintUrl} target="_blank" rel="noopener noreferrer">
             <span>ENTER THE CLUB</span>
             <strong>→</strong>
           </a>
@@ -965,7 +926,7 @@ export default function Home() {
 
           <motion.div className="street-content shell-wide" variants={staggerParent}>
             <Billboard style={billboardStyle} />
-            <motion.a className="mobile-mint-cta" href={mintUrl} target="_blank" rel="noreferrer" aria-label="Mint your Bobro now" variants={cardReveal}>
+            <motion.a className="mobile-mint-cta" href={mintUrl} target="_blank" rel="noopener noreferrer" aria-label="Mint your Bobro now" variants={cardReveal}>
               <span>Mint your Bobro now</span>
             </motion.a>
             <AtmInteractive style={atmStyle} />
@@ -979,22 +940,22 @@ export default function Home() {
 
           <div className="footer-overlay">
             <div className="footer-link-grid" aria-label="BOBROS footer links">
-              <a className="footer-card footer-card-mint" href={mintUrl} target="_blank" rel="noreferrer" aria-label="Mint BOBROS">
+              <a className="footer-card footer-card-mint" href={mintUrl} target="_blank" rel="noopener noreferrer" aria-label="Mint BOBROS">
                 <span>MINT</span>
                 <strong>BOBROS</strong>
               </a>
 
-              <a className="footer-card footer-card-buy" href={buyUrl} target="_blank" rel="noreferrer">
+              <a className="footer-card footer-card-buy" href={buyUrl} target="_blank" rel="noopener noreferrer">
                 <span>BUY</span>
                 <strong>$BOBO</strong>
               </a>
 
-              <a className="footer-card footer-card-dark" href="https://x.com/bobroscartel" target="_blank" rel="noreferrer">
+              <a className="footer-card footer-card-dark" href="https://x.com/bobroscartel" target="_blank" rel="noopener noreferrer">
                 <span>X /</span>
                 <strong>BOBROS</strong>
               </a>
 
-              <a className="footer-card footer-card-founder" href="https://x.com/scream_vision" target="_blank" rel="noreferrer">
+              <a className="footer-card footer-card-founder" href="https://x.com/scream_vision" target="_blank" rel="noopener noreferrer">
                 <span>X /</span>
                 <strong>FOUNDER</strong>
               </a>
@@ -1004,7 +965,7 @@ export default function Home() {
               <p>&copy; 2026 Bobros Cartel. All rights reserved.</p>
               <p>
                 built by{" "}
-                <a href="https://x.com/scream_vision" target="_blank" rel="noreferrer">
+                <a href="https://x.com/scream_vision" target="_blank" rel="noopener noreferrer">
                   scream.vision
                 </a>
               </p>
