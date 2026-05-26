@@ -473,6 +473,149 @@
   line-height: 1.4;
 }
 
+.readyMenu {
+  width: min(100%, 49rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.9fr);
+  gap: 0.58rem;
+  align-items: stretch;
+}
+
+.menuAccessPanel,
+.menuSkinPanel {
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.58rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 246, 210, 0.18)),
+    rgba(255, 255, 255, 0.34);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.12);
+}
+
+.menuAccessPanel {
+  align-content: start;
+}
+
+.menuIntro {
+  display: grid;
+  gap: 0.34rem;
+}
+
+.menuIntro span,
+.terminalHeader span {
+  color: rgba(33, 22, 15, 0.64);
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.prizeStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.26rem;
+}
+
+.prizeStrip b {
+  min-width: 0;
+  padding: 0.3rem 0.32rem;
+  border: 2px solid rgba(0, 0, 0, 0.62);
+  border-radius: 8px;
+  color: #090909;
+  background: rgba(242, 199, 58, 0.56);
+  font-size: 0.52rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.primaryRunButton,
+.bountyRunButton {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  font-size: 0.78rem;
+}
+
+.primaryRunButton {
+  background: var(--game-green);
+}
+
+.bountyRunButton {
+  background: var(--game-yellow);
+  box-shadow: 0 8px 0 rgba(91, 72, 31, 0.34);
+}
+
+.holderTerminal {
+  display: grid;
+  gap: 0.36rem;
+  padding: 0.46rem;
+  border: 2px dashed rgba(0, 0, 0, 0.58);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.035) 0 1px, transparent 1px 8px),
+    rgba(255, 248, 223, 0.62);
+}
+
+.terminalHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.terminalHeader strong {
+  color: #416c2d;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.holderTerminal > .startButton {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.18rem;
+  padding: 0.42rem 0.6rem;
+  font-size: 0.64rem;
+}
+
+.safetyLine {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.26rem;
+}
+
+.safetyLine span,
+.statusPill {
+  min-width: 0;
+  padding: 0.22rem 0.34rem;
+  border: 2px solid rgba(0, 0, 0, 0.48);
+  border-radius: 999px;
+  color: #416c2d;
+  background: rgba(255, 255, 255, 0.44);
+  font-size: 0.5rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.statusPill {
+  justify-self: center;
+  color: #090909;
+  background: rgba(110, 173, 71, 0.72);
+}
+
+.menuSkinPanel .skinSelector {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .skinSelector {
   width: min(100%, 24rem);
   display: grid;
@@ -1254,6 +1397,79 @@
     line-height: 1.25;
   }
 
+  .readyMenu {
+    width: 100%;
+    max-height: 100%;
+    grid-template-columns: 1fr;
+    gap: 0.34rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.1rem;
+  }
+
+  .menuAccessPanel,
+  .menuSkinPanel {
+    gap: 0.28rem;
+    padding: 0.34rem;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .menuIntro {
+    gap: 0.24rem;
+  }
+
+  .menuIntro span,
+  .terminalHeader span {
+    font-size: 0.48rem;
+  }
+
+  .prizeStrip {
+    gap: 0.18rem;
+  }
+
+  .prizeStrip b {
+    padding: 0.24rem 0.18rem;
+    border-width: 1.5px;
+    font-size: 0.42rem;
+  }
+
+  .primaryRunButton,
+  .bountyRunButton {
+    min-height: 2.18rem;
+    font-size: 0.58rem;
+  }
+
+  .holderTerminal {
+    gap: 0.24rem;
+    padding: 0.32rem;
+  }
+
+  .terminalHeader {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .terminalHeader strong {
+    font-size: 0.62rem;
+  }
+
+  .holderTerminal > .startButton {
+    min-height: 1.96rem;
+    padding: 0.32rem 0.48rem;
+    font-size: 0.52rem;
+  }
+
+  .safetyLine {
+    gap: 0.18rem;
+  }
+
+  .safetyLine span,
+  .statusPill {
+    padding: 0.18rem 0.22rem;
+    border-width: 1.5px;
+    font-size: 0.42rem;
+  }
+
   .skinSelector {
     min-height: 0;
     max-height: min(24svh, 10.8rem);
@@ -1261,6 +1477,12 @@
     overscroll-behavior: contain;
     gap: 0.32rem;
     padding: 0.38rem;
+  }
+
+  .menuSkinPanel .skinSelector {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
   }
 
   .modeChooser {
@@ -1315,14 +1537,25 @@
     width: 2.65rem;
   }
 
+  .menuSkinPanel .skinSelectedPreview img {
+    width: 3.1rem;
+  }
+
   .skinGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(4.6rem, 5.4rem);
+    grid-template-columns: none;
     gap: 0.32rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 0.18rem;
+    scroll-snap-type: x proximity;
   }
 
   .skinButton {
     min-height: 4.85rem;
     padding-block: 0.34rem;
+    scroll-snap-align: start;
   }
 
   .skinPreview {
@@ -1337,7 +1570,7 @@
     font-size: 0.46rem;
   }
 
-  .gameOverlay .startButton {
+  .gameOverlay > .startButton {
     position: sticky;
     bottom: 0;
     z-index: 5;

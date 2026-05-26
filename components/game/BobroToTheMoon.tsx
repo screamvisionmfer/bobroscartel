@@ -3757,6 +3757,7 @@ export default function BobroToTheMoon({
   const activePointerIdRef = useRef<number | null>(null);
   const worldRef = useRef<World>(createWorld());
   const activeRunSessionRef = useRef<ActiveRunSession | null>(null);
+  const autoStartGuestRunRef = useRef(false);
   const bestTodayRef = useRef(0);
   const recordRunRef = useRef<(world: World) => void>(() => undefined);
   const assetsRef = useRef<LoadedAssets>({ heads: {}, fallbackHead: null, backgrounds: {}, platforms: {}, honeyLife: null, mumu: null });
@@ -3955,7 +3956,7 @@ export default function BobroToTheMoon({
     setMode("guest");
     setModeChosen(true);
     setWalletStatus("idle");
-    setAccessMessage("Guest run — scores are local only.");
+    setAccessMessage("GUEST RUN READY. LOCAL SCORE ONLY.");
     setWalletAddress("");
     setManualWalletAddress("");
     setBobrosCount(0);
@@ -3967,6 +3968,7 @@ export default function BobroToTheMoon({
   const connectHolderWallet = useCallback(async () => {
     if (walletStatus === "connecting" || walletStatus === "checking") return;
 
+    autoStartGuestRunRef.current = false;
     setWalletStatus("connecting");
     setAccessMessage("");
 
@@ -3993,9 +3995,15 @@ export default function BobroToTheMoon({
     }
   }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
 
+  const startGuestRunFromMenu = useCallback(() => {
+    autoStartGuestRunRef.current = true;
+    playAsGuest();
+  }, [playAsGuest]);
+
   const checkEnteredWalletAddress = useCallback(async () => {
     if (walletStatus === "connecting" || walletStatus === "checking") return;
 
+    autoStartGuestRunRef.current = false;
     const wallet = normalizeWalletInput(manualWalletAddress);
     setManualWalletAddress(wallet);
 
@@ -4278,12 +4286,21 @@ export default function BobroToTheMoon({
     syncHud(true);
   }, [assetsLoaded, modeChosen, playSfx, scheduleCountdownFinish, startRunSession, syncHud]);
 
+  useEffect(() => {
+    if (!autoStartGuestRunRef.current) return;
+    if (!assetsLoaded || !modeChosen || mode !== "guest" || worldRef.current.status !== "ready") return;
+
+    autoStartGuestRunRef.current = false;
+    void startGame();
+  }, [assetsLoaded, mode, modeChosen, startGame]);
+
   const returnToStartScreen = useCallback(() => {
     const currentWorld = worldRef.current;
     const nextWorld = createWorld(currentWorld.width, currentWorld.height, "ready");
 
     clearCountdownTimeout();
     activeRunSessionRef.current = null;
+    autoStartGuestRunRef.current = false;
     setRunSessionMessage("");
     worldRef.current = nextWorld;
     inputRef.current = { left: false, right: false };
@@ -4527,6 +4544,16 @@ export default function BobroToTheMoon({
     ? `Holder mode${walletShort ? ` · ${walletShort}` : ""}`
     : "Guest run — scores are local only.";
   const canSaveRun = result?.mode === "holder" && isHolderMode && result.leaderboardEligible && Boolean(result.runId);
+  const readyStartLabel = isHolderMode ? "START BOUNTY RUN" : "START GUEST RUN";
+  const holderStatusLabel = isHolderMode
+    ? `HOLDER VERIFIED · ${bobrosCount} BOBROS`
+    : walletStatus === "denied"
+      ? "NO BOBROS FOUND"
+    : walletStatus === "error"
+        ? "CHECK FAILED"
+        : modeChosen && mode === "guest"
+          ? "GUEST RUN READY"
+          : "";
 
   return (
     <section className={styles.gameCabinet} aria-label="BOBRO TO THE MOON game frame">
@@ -4592,11 +4619,9 @@ export default function BobroToTheMoon({
                 ? hud.deathMessage
                 : hud.status === "paused"
                   ? "HOLD"
-                  : hud.status === "countdown"
-                    ? hud.countdownText || "PUMP"
-                    : modeChosen
-                      ? "BOBRO TO THE MOON"
-                      : "PLAY YOUR WAY"}
+                : hud.status === "countdown"
+                  ? hud.countdownText || "PUMP"
+                  : "BOBRO TO THE MOON"}
             </h2>
             <p>
               {hud.status === "dead"
@@ -4605,64 +4630,132 @@ export default function BobroToTheMoon({
                   : "GUEST SCORE SAVED LOCALLY. FLEX THE RECEIPT OR RUN IT BACK."
                 : hud.status === "paused"
                   ? "ESC OR P TO RESUME."
-                  : hud.status === "countdown"
-                    ? "PUMP IS COMING."
-                    : modeChosen
-                      ? "A/D OR ARROWS. TAP LEFT OR RIGHT SIDE ON MOBILE."
-                      : "Connect a Bobro wallet to unlock skins and enter the bounty board."}
+                : hud.status === "countdown"
+                  ? "PUMP IS COMING."
+                  : "HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD."}
             </p>
             {hud.status === "ready" ? (
-              <div className={styles.modeChooser} aria-label="Choose game access mode">
-                <div className={styles.modeButtons}>
-                  <button className={styles.startButton} type="button" onClick={playAsGuest}>
-                    PLAY AS GUEST
+              <div className={styles.readyMenu} aria-label="BOBRO TO THE MOON start menu">
+                <div className={styles.menuAccessPanel}>
+                  <div className={styles.menuIntro}>
+                    <span>HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD</span>
+                    <div className={styles.prizeStrip} aria-label="Weekly contest rewards">
+                      <b>#1 WINS BOBROS NFT</b>
+                      <b>TOP 3 GET WHITELIST</b>
+                      <b>MANUAL REVIEW</b>
+                    </div>
+                  </div>
+
+                  <button className={`${styles.startButton} ${styles.primaryRunButton}`} type="button" onClick={startGuestRunFromMenu}>
+                    START GUEST RUN
                   </button>
-                  <button
-                    className={styles.startButton}
-                    type="button"
-                    onClick={connectHolderWallet}
-                    disabled={walletStatus === "connecting" || walletStatus === "checking"}
-                  >
-                    {walletStatus === "connecting" ? "CONNECTING..." : walletStatus === "checking" ? "CHECKING..." : "CONNECT WALLET"}
-                  </button>
-                </div>
-                <label className={styles.walletEntry}>
-                  <span>ENTER WALLET ADDRESS</span>
-                  <div>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder="Paste Solana wallet"
-                      value={manualWalletAddress}
-                      onChange={(event) => setManualWalletAddress(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void checkEnteredWalletAddress();
-                        }
-                      }}
-                    />
+
+                  <div className={styles.holderTerminal} aria-label="Holder access terminal">
+                    <div className={styles.terminalHeader}>
+                      <strong>HOLDER ACCESS</strong>
+                      <span>CONNECT OR PASTE WALLET</span>
+                    </div>
                     <button
                       className={styles.startButton}
                       type="button"
-                      onClick={checkEnteredWalletAddress}
+                      onClick={connectHolderWallet}
                       disabled={walletStatus === "connecting" || walletStatus === "checking"}
                     >
-                      {walletStatus === "checking" ? "CHECKING..." : "CHECK"}
+                      {walletStatus === "connecting" ? "CONNECTING..." : walletStatus === "checking" ? "CHECKING..." : "HOLDER LOGIN"}
                     </button>
+                    <label className={styles.walletEntry}>
+                      <span>PASTE HOLDER WALLET</span>
+                      <div>
+                        <input
+                          type="text"
+                          inputMode="text"
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder="PASTE SOLANA WALLET"
+                          value={manualWalletAddress}
+                          onChange={(event) => setManualWalletAddress(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void checkEnteredWalletAddress();
+                            }
+                          }}
+                        />
+                        <button
+                          className={styles.startButton}
+                          type="button"
+                          onClick={checkEnteredWalletAddress}
+                          disabled={walletStatus === "connecting" || walletStatus === "checking"}
+                        >
+                          {walletStatus === "checking" ? "..." : "VERIFY"}
+                        </button>
+                      </div>
+                    </label>
+                    <div className={styles.safetyLine}>
+                      <span>NO SIGNATURE · NO TRANSACTION</span>
+                      <span>ADDRESS CHECK ONLY</span>
+                    </div>
+                    {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
+                    {accessMessage ? (
+                      <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
+                    ) : null}
                   </div>
-                </label>
-                <small>No wallet signature required. No transaction.</small>
-                <small>Paste mode needs no wallet approval.</small>
-                <small>We only check whether the wallet holds a Bobros NFT.</small>
-                {accessMessage ? (
-                  <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
-                ) : modeChosen && mode === "guest" ? (
-                  <small>Connect a Bobro wallet to unlock skins and enter the bounty board.</small>
-                ) : null}
-                <small>Weekly leaderboard entries are reviewed before rewards are distributed.</small>
+
+                  {modeChosen ? (
+                    <button
+                      className={`${styles.startButton} ${styles.bountyRunButton}`}
+                      type="button"
+                      onClick={startGame}
+                      disabled={!assetsLoaded}
+                    >
+                      {!assetsLoaded ? "LOADING ASSETS" : readyStartLabel}
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className={styles.menuSkinPanel}>
+                  <div className={styles.skinSelector} aria-label="Choose your Bobro">
+                    <strong className={styles.skinTitle}>SELECT BOBRO</strong>
+                    <div className={styles.skinSelectedPreview}>
+                      <img src={selectedHeadOption.src} alt="" aria-hidden="true" />
+                      <div>
+                        <span>SELECTED</span>
+                        <strong>{selectedHeadOption.label}</strong>
+                        <small>{mode === "holder" ? `BEST ${formatMcap(bestUnlockScore)}` : "GUEST DEFAULT ONLY"}</small>
+                      </div>
+                    </div>
+                    <div className={styles.skinGrid}>
+                      {headOptions.map((head) => {
+                        const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";
+
+                        return (
+                          <button
+                            className={`${styles.skinButton} ${selectedHead === head.key ? styles.skinButtonSelected : ""} ${unlocked ? "" : styles.skinButtonLocked}`}
+                            type="button"
+                            key={head.key}
+                            onClick={() => selectHead(head.key)}
+                            aria-pressed={selectedHead === head.key}
+                            disabled={!unlocked}
+                          >
+                            <img className={styles.skinPreview} src={head.src} alt="" aria-hidden="true" />
+                            <span>{head.label}</span>
+                            <small className={styles.skinUnlock}>
+                              {unlocked
+                                ? selectedHead === head.key
+                                  ? "SELECTED"
+                                  : mode === "holder"
+                                    ? "UNLOCKED"
+                                    : "DEFAULT"
+                                : mode === "holder"
+                                  ? formatMcap(head.unlockAt)
+                                  : "LOCKED"}
+                            </small>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : null}
             {hud.status === "dead" && result ? (
@@ -4715,49 +4808,6 @@ export default function BobroToTheMoon({
                 {saveStatus === "error" ? <small className={styles.formError}>SAVE FAILED. TRY AGAIN.</small> : null}
               </div>
             ) : null}
-            {hud.status === "ready" && modeChosen ? (
-              <div className={styles.skinSelector} aria-label="Choose your Bobro">
-                <strong className={styles.skinTitle}>CHOOSE YOUR BOBRO</strong>
-                <div className={styles.skinSelectedPreview}>
-                  <img src={selectedHeadOption.src} alt="" aria-hidden="true" />
-                  <div>
-                    <span>SELECTED</span>
-                    <strong>{selectedHeadOption.label}</strong>
-                    <small>{mode === "holder" ? `BEST ${formatMcap(bestUnlockScore)}` : "GUEST DEFAULT ONLY"}</small>
-                  </div>
-                </div>
-                <div className={styles.skinGrid}>
-                  {headOptions.map((head) => {
-                    const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";
-
-                    return (
-                      <button
-                        className={`${styles.skinButton} ${selectedHead === head.key ? styles.skinButtonSelected : ""} ${unlocked ? "" : styles.skinButtonLocked}`}
-                        type="button"
-                        key={head.key}
-                        onClick={() => selectHead(head.key)}
-                        aria-pressed={selectedHead === head.key}
-                        disabled={!unlocked}
-                      >
-                        <img className={styles.skinPreview} src={head.src} alt="" aria-hidden="true" />
-                        <span>{head.label}</span>
-                        <small className={styles.skinUnlock}>
-                          {unlocked
-                            ? selectedHead === head.key
-                              ? "SELECTED"
-                              : mode === "holder"
-                                ? "UNLOCKED"
-                                : "DEFAULT"
-                            : mode === "holder"
-                              ? `UNLOCKS AT ${formatMcap(head.unlockAt)} MCAP`
-                              : "CONNECT HOLDER WALLET"}
-                        </small>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
             {hud.status === "dead" && result ? (
               <div className={styles.deathActions}>
                 <button className={styles.startButton} type="button" onClick={saveRunToBountyBoard} disabled={!canSaveRun || saveStatus === "saving" || result.saved}>
@@ -4773,7 +4823,7 @@ export default function BobroToTheMoon({
                   RUN AGAIN
                 </button>
               </div>
-            ) : hud.status !== "countdown" && modeChosen ? (
+            ) : hud.status !== "ready" && hud.status !== "countdown" && modeChosen ? (
               <button
                 className={styles.startButton}
                 type="button"
