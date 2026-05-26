@@ -3865,7 +3865,16 @@ export default function BobroToTheMoon({
   const autoStartGuestRunRef = useRef(false);
   const bestTodayRef = useRef(0);
   const recordRunRef = useRef<(world: World) => void>(() => undefined);
-  const assetsRef = useRef<LoadedAssets>({ heads: {}, fallbackHead: null, backgrounds: {}, platforms: {}, honeyLife: null, mumu: null });
+  const assetsRef = useRef<LoadedAssets>({
+    heads: {},
+    fallbackHead: null,
+    backgrounds: {},
+    platforms: {},
+    honeyLife: null,
+    jetpack: null,
+    mumu: null,
+    evilMumu: null,
+  });
   const countdownTimeoutRef = useRef<number | undefined>(undefined);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [mode, setMode] = useState<GameMode>("guest");
