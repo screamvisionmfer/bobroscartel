@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import styles from "./Game.module.css";
+import { useGameAudio, type GameAudioCue, type GameMusicMode } from "./useGameAudio";
 
 const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
@@ -125,7 +126,6 @@ type GameMode = "guest" | "holder";
 type StageLabel = (typeof stageLabels)[number];
 type BackgroundKey = keyof typeof backgroundAssetPaths;
 type HeadKey = keyof typeof headAssetPaths;
-type SfxName = "countdown" | "pump" | "jump" | "bonus" | "break" | "death" | "pause";
 type ImageMap<T extends string> = Partial<Record<T, HTMLImageElement>>;
 
 type LoadedAssets = {
@@ -325,6 +325,37 @@ type HudState = {
   milestoneActive: boolean;
 };
 
+const initialHudState: HudState = {
+  status: "ready",
+  score: 0,
+  bonusLabel: "",
+  deathMessage: "",
+  bestToday: 0,
+  lives: 1,
+  multiplier: 1,
+  stage: "BACKALLEY",
+  countdownText: "",
+  statusLabels: [],
+  milestoneActive: false,
+};
+
+function areHudStatesEqual(left: HudState, right: HudState) {
+  return (
+    left.status === right.status &&
+    left.score === right.score &&
+    left.bonusLabel === right.bonusLabel &&
+    left.deathMessage === right.deathMessage &&
+    left.bestToday === right.bestToday &&
+    left.lives === right.lives &&
+    left.multiplier === right.multiplier &&
+    left.stage === right.stage &&
+    left.countdownText === right.countdownText &&
+    left.milestoneActive === right.milestoneActive &&
+    left.statusLabels.length === right.statusLabels.length &&
+    left.statusLabels.every((label, index) => label === right.statusLabels[index])
+  );
+}
+
 type RunResult = {
   score: number;
   stage: StageLabel;
@@ -377,7 +408,6 @@ const countdownDuration = 2.8;
 const feedbackLifetime = 1.1;
 const particleLimit = 70;
 const majorMcapMilestones = [1_000_000, 10_000_000, 100_000_000, 1_000_000_000, 10_000_000_000, 69_000_000_000] as const;
-const optionalSfxUrls: Partial<Record<SfxName, string>> = {};
 
 function pickRandom<T>(items: readonly T[]) {
   return items[Math.floor(Math.random() * items.length)] ?? items[0];
@@ -575,6 +605,10 @@ function isMobileWorld(world: Pick<World, "width">) {
 
 function getStage(score: number): StageLabel {
   return biomeDefinitions[getBiomeIndex(score)]?.label ?? "BACKALLEY";
+}
+
+function getMusicModeForStage(stage: StageLabel): GameMusicMode {
+  return stageLabels.indexOf(stage) >= stageLabels.indexOf("STORM MARKET") ? "high" : "normal";
 }
 
 function getBackgroundMix(score: number): { current: BackgroundKey; next?: BackgroundKey; alpha: number; message?: string } {
@@ -1606,7 +1640,7 @@ function updateParticles(world: World, deltaSeconds: number) {
   });
 }
 
-function endRun(world: World, recordRun: (world: World) => void) {
+function endRun(world: World, recordRun: (world: World) => void, playAudioCue?: (cue: GameAudioCue) => void) {
   if (world.status === "dead") return;
 
   world.status = "dead";
@@ -1620,6 +1654,7 @@ function endRun(world: World, recordRun: (world: World) => void) {
   triggerHitStop(world, 0.08);
   addPaperParticles(world, world.player.x, world.player.y, "#b94b3e", 14, 1.3);
   pushFloatingText(world, "LIQUIDATED", world.player.x, world.player.y + 42, "#b94b3e");
+  playAudioCue?.("loseGame");
 
   if (!world.scoreSubmitted) {
     world.scoreSubmitted = true;
@@ -1705,7 +1740,7 @@ function convertAbovePlayerPlatformsToPanicRed(world: World) {
   }
 }
 
-function updateCollectibles(world: World) {
+function updateCollectibles(world: World, playAudioCue?: (cue: GameAudioCue) => void) {
   const { player } = world;
 
   for (const collectible of world.collectibles) {
@@ -1735,6 +1770,7 @@ function updateCollectibles(world: World) {
       addPaperParticles(world, collectible.x, collectible.y, "#e4b745", 16, 1.7);
       triggerNotice(world, "JETPACK BOOST", 1.6);
       pushFloatingText(world, "JETPACK BOOST", collectible.x, collectible.y + 22, "#e4b745");
+      playAudioCue?.("jetpack");
     } else {
       world.marketCrashUntil = world.time + marketCrashDuration;
       world.redPillCooldownUntil = world.time + nextRedPillCooldown();
@@ -1746,6 +1782,7 @@ function updateCollectibles(world: World) {
       addPaperParticles(world, collectible.x, collectible.y, "#d94b45", 12, 1.2);
       triggerNotice(world, "OH SHIT, BOBO MARKET", 2.2);
       pushFloatingText(world, "MARKET PANIC", collectible.x, collectible.y + 24, "#d94b45");
+      playAudioCue?.("redPill");
     }
   }
 
@@ -1771,7 +1808,7 @@ function isIntoxicated(world: World) {
   return world.intoxicatedUntil > world.time;
 }
 
-function updateHoneyLife(world: World) {
+function updateHoneyLife(world: World, playAudioCue?: (cue: GameAudioCue) => void) {
   if (!world.honeyLife) return;
 
   const { honeyLife, player } = world;
@@ -1796,6 +1833,7 @@ function updateHoneyLife(world: World) {
         triggerNotice(world, "EXTRA HONEY", 1.45);
         pushFloatingText(world, "+1 LIFE", honeyLife.x, honeyLife.y + 26, "#d49632");
       }
+      playAudioCue?.("honey");
     }
   }
 
@@ -1804,11 +1842,12 @@ function updateHoneyLife(world: World) {
   }
 }
 
-function updateMumuObstacle(world: World, mumu: MumuObstacle, deltaSeconds: number) {
+function updateMumuObstacle(world: World, mumu: MumuObstacle, deltaSeconds: number, playAudioCue?: (cue: GameAudioCue) => void) {
   if (mumu.state === "warning") {
     if (world.time - mumu.warningStartedAt >= mumu.warningDuration) {
       mumu.state = "active";
       mumu.activeStartedAt = world.time;
+      playAudioCue?.("mumu");
     }
     return true;
   }
@@ -1909,19 +1948,20 @@ function updateMumuObstacle(world: World, mumu: MumuObstacle, deltaSeconds: numb
   addPaperParticles(world, player.x, player.y, mumu.variant === "red" ? "#d2292f" : "#d94b45", mumu.variant === "red" ? 22 : 18, 1.45);
   triggerNotice(world, "MUMU SMASH", 1.35);
   pushFloatingText(world, "MUMU SMASH", player.x, player.y + 38, "#d94b45");
+  playAudioCue?.("mumu");
   return true;
 }
 
-function updateMumu(world: World, deltaSeconds: number) {
+function updateMumu(world: World, deltaSeconds: number, playAudioCue?: (cue: GameAudioCue) => void) {
   maybeSpawnMumu(world, deltaSeconds);
 
   const hadMumu = activeMumuCount(world) > 0;
 
-  if (world.mumu && !updateMumuObstacle(world, world.mumu, deltaSeconds)) {
+  if (world.mumu && !updateMumuObstacle(world, world.mumu, deltaSeconds, playAudioCue)) {
     world.mumu = null;
   }
 
-  if (world.mumu2 && !updateMumuObstacle(world, world.mumu2, deltaSeconds)) {
+  if (world.mumu2 && !updateMumuObstacle(world, world.mumu2, deltaSeconds, playAudioCue)) {
     world.mumu2 = null;
   }
 
@@ -2094,16 +2134,16 @@ function respawnPlayer(world: World) {
   pushFloatingText(world, "SAVED", world.player.x, world.player.y + 38, "#8ba65b");
 }
 
-function handleFall(world: World, recordRun: (world: World) => void) {
+function handleFall(world: World, recordRun: (world: World) => void, playAudioCue?: (cue: GameAudioCue) => void) {
   if (world.lives > 1) {
     respawnPlayer(world);
     return;
   }
 
-  endRun(world, recordRun);
+  endRun(world, recordRun, playAudioCue);
 }
 
-function activateOnFire(world: World) {
+function activateOnFire(world: World, playAudioCue?: (cue: GameAudioCue) => void) {
   world.onFireUntil = world.time + onFireDuration;
   world.shakePower = Math.max(world.shakePower, 12);
   world.flashPower = Math.max(world.flashPower, 0.34);
@@ -2112,9 +2152,10 @@ function activateOnFire(world: World) {
   addPaperParticles(world, world.player.x, world.player.y, "#e05b2d", 16, 1.5);
   triggerNotice(world, "ON FIRE", 1.5);
   pushFloatingText(world, "ON FIRE", world.player.x, world.player.y + 48, "#e05b2d");
+  playAudioCue?.("onFire");
 }
 
-function recordPlatformLanding(world: World) {
+function recordPlatformLanding(world: World, playAudioCue?: (cue: GameAudioCue) => void) {
   if (world.status !== "playing") return;
 
   world.platformLandings += 1;
@@ -2122,7 +2163,7 @@ function recordPlatformLanding(world: World) {
   if (world.platformLandings < world.nextOnFireLandingTarget) return;
 
   world.nextOnFireLandingTarget += 50;
-  activateOnFire(world);
+  activateOnFire(world, playAudioCue);
 }
 
 function awardAltitudeScore(world: World) {
@@ -2155,7 +2196,13 @@ function awardAltitudeScore(world: World) {
   }
 }
 
-function updateWorld(world: World, input: InputState, deltaSeconds: number, recordRun: (world: World) => void) {
+function updateWorld(
+  world: World,
+  input: InputState,
+  deltaSeconds: number,
+  recordRun: (world: World) => void,
+  playAudioCue?: (cue: GameAudioCue) => void,
+) {
   if (world.status === "ready" || world.status === "paused" || world.status === "dead") return;
 
   if (world.hitStopRemaining > 0) {
@@ -2231,10 +2278,10 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
   }
 
   player.y += player.vy * deltaSeconds;
-  updateCollectibles(world);
-  updateHoneyLife(world);
+  updateCollectibles(world, playAudioCue);
+  updateHoneyLife(world, playAudioCue);
   maybeSpawnRedPill(world, deltaSeconds);
-  updateMumu(world, deltaSeconds);
+  updateMumu(world, deltaSeconds, playAudioCue);
 
   const nextBottom = player.y - player.height / 2;
 
@@ -2250,11 +2297,12 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
       let nextJumpVelocity = jumpVelocity + difficulty * 10;
 
       player.y = platform.y + player.height / 2 + 1;
-      recordPlatformLanding(world);
+      recordPlatformLanding(world, playAudioCue);
 
       if (platform.kind === "green-candle") {
         nextJumpVelocity = jumpVelocity + difficulty * 10;
         reactToLanding(world, platform, "#8ba65b", 0.045, 4);
+        playAudioCue?.("greenJump");
       }
 
       if (platform.kind === "red-candle") {
@@ -2264,6 +2312,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
         nextJumpVelocity = jumpVelocity + difficulty * 10;
         world.shakePower = Math.max(world.shakePower, 5);
         reactToLanding(world, platform, "#b94b3e", wasPanicRed ? 0.09 : 0.075, wasPanicRed ? 7 : 5);
+        playAudioCue?.("redJump");
 
         if (platform.panicRed || platform.redHits >= 2) {
           platform.state = "breaking";
@@ -2285,6 +2334,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
         reactToLanding(world, platform, "#d4aa4c", 0.08, 6);
         triggerNotice(world, "RUG!", 1.05);
         pushFloatingText(world, "RUG!", platform.x + platform.width / 2, platform.y + 24, "#e4b745");
+        playAudioCue?.("rugJump");
       }
 
       if (platform.kind === "honey-jar") {
@@ -2295,6 +2345,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
         reactToLanding(world, platform, "#e4b745", 0.055, 5);
         triggerNotice(world, "HONEY x2", 1.35);
         pushFloatingText(world, "HONEY x2", platform.x + platform.width / 2, platform.y + 28, "#e4b745");
+        playAudioCue?.("honeyPlatform");
       }
 
       if (platform.hasMoneyPrinter) {
@@ -2307,6 +2358,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
         reactToLanding(world, platform, "#8ba65b", 0.12, 12);
         triggerNotice(world, "CASH BOOST", 1.45);
         pushFloatingText(world, "CASH BOOST", platform.x + platform.width / 2, platform.y + 38, "#8ba65b");
+        playAudioCue?.("cashPrinterPlatform");
       }
 
       if (platform.kind === "solana") {
@@ -2315,6 +2367,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
         reactToLanding(world, platform, "#8f6ed5", 0.075, 7);
         triggerNotice(world, "SOL BOOST", 1.2);
         pushFloatingText(world, "SOL BOOST", platform.x + platform.width / 2, platform.y + 28, "#8f6ed5");
+        playAudioCue?.("solanaPlatform");
       }
 
       if (isOnFire(world)) {
@@ -2346,7 +2399,7 @@ function updateWorld(world: World, input: InputState, deltaSeconds: number, reco
   ensurePlatformBuffer(world);
 
   if (screenY(world, player.y) > world.height + 95) {
-    handleFall(world, recordRun);
+    handleFall(world, recordRun, playAudioCue);
   }
 }
 
@@ -3750,18 +3803,38 @@ export default function BobroToTheMoon({
   onScoreSubmitted: () => void;
   onAccessChange?: (access: { mode: GameMode; wallet?: string }) => void;
 }) {
+  const {
+    muted: audioMuted,
+    toggleMuted: toggleAudioMuted,
+    startMusic,
+    switchToHighLevelMusic,
+    pauseMusic,
+    stopMusic,
+    playGreenJump,
+    playRedJump,
+    playRugJump,
+    playHoneyPlatform,
+    playSolanaPlatform,
+    playCashPrinterPlatform,
+    playRedPill,
+    playOnFire,
+    playJetpack,
+    playHoney,
+    playMumu,
+    playLoseGame,
+  } = useGameAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
   const inputRef = useRef<InputState>({ left: false, right: false });
   const activePointerIdRef = useRef<number | null>(null);
   const worldRef = useRef<World>(createWorld());
+  const hudRef = useRef<HudState>(initialHudState);
   const activeRunSessionRef = useRef<ActiveRunSession | null>(null);
   const autoStartGuestRunRef = useRef(false);
   const bestTodayRef = useRef(0);
   const recordRunRef = useRef<(world: World) => void>(() => undefined);
   const assetsRef = useRef<LoadedAssets>({ heads: {}, fallbackHead: null, backgrounds: {}, platforms: {}, honeyLife: null, mumu: null });
-  const lastAudioCueRef = useRef("");
   const countdownTimeoutRef = useRef<number | undefined>(undefined);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [mode, setMode] = useState<GameMode>("guest");
@@ -3778,21 +3851,9 @@ export default function BobroToTheMoon({
   const [nameError, setNameError] = useState("");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [hud, setHud] = useState<HudState>({
-    status: "ready",
-    score: 0,
-    bonusLabel: "",
-    deathMessage: "",
-    bestToday: 0,
-    lives: 1,
-    multiplier: 1,
-    stage: "BACKALLEY",
-    countdownText: "",
-    statusLabels: [],
-    milestoneActive: false,
-  });
+  const [hud, setHud] = useState<HudState>(initialHudState);
 
-  const syncHud = useCallback((force = false) => {
+  const syncHud = useCallback((_force = false) => {
     const world = worldRef.current;
     const displayScore = getDisplayScore(world);
     const statusLabels = [
@@ -3814,24 +3875,55 @@ export default function BobroToTheMoon({
       milestoneActive: world.milestonePulseUntil > world.time,
     };
 
-    setHud((currentHud) => {
-      const hasChanged =
-        force ||
-        currentHud.status !== nextHud.status ||
-        currentHud.score !== nextHud.score ||
-        currentHud.bonusLabel !== nextHud.bonusLabel ||
-        currentHud.deathMessage !== nextHud.deathMessage ||
-        currentHud.bestToday !== nextHud.bestToday ||
-        currentHud.lives !== nextHud.lives ||
-        currentHud.multiplier !== nextHud.multiplier ||
-        currentHud.stage !== nextHud.stage ||
-        currentHud.countdownText !== nextHud.countdownText ||
-        currentHud.statusLabels.join("|") !== nextHud.statusLabels.join("|") ||
-        currentHud.milestoneActive !== nextHud.milestoneActive;
+    if (areHudStatesEqual(hudRef.current, nextHud)) return;
 
-      return hasChanged ? nextHud : currentHud;
-    });
+    hudRef.current = nextHud;
+    setHud(nextHud);
   }, []);
+
+  const playAudioCue = useCallback(
+    (cue: GameAudioCue) => {
+      if (cue === "greenJump") {
+        playGreenJump();
+      } else if (cue === "redJump") {
+        playRedJump();
+      } else if (cue === "rugJump") {
+        playRugJump();
+      } else if (cue === "honeyPlatform") {
+        playHoneyPlatform();
+      } else if (cue === "solanaPlatform") {
+        playSolanaPlatform();
+      } else if (cue === "cashPrinterPlatform") {
+        playCashPrinterPlatform();
+      } else if (cue === "redPill") {
+        playRedPill();
+      } else if (cue === "onFire") {
+        playOnFire();
+      } else if (cue === "jetpack") {
+        playJetpack();
+      } else if (cue === "honey") {
+        playHoney();
+      } else if (cue === "loseGame") {
+        playLoseGame();
+      } else {
+        playMumu();
+      }
+    },
+    [
+      playCashPrinterPlatform,
+      playGreenJump,
+      playHoney,
+      playHoneyPlatform,
+      playJetpack,
+      playLoseGame,
+      playMumu,
+      playOnFire,
+      playRedJump,
+      playRedPill,
+      playRugJump,
+      playSolanaPlatform,
+    ],
+  );
 
   const loadProgressForMode = useCallback(
     (nextMode: GameMode, nextWallet = "") => {
@@ -3996,9 +4088,10 @@ export default function BobroToTheMoon({
   }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
 
   const startGuestRunFromMenu = useCallback(() => {
+    startMusic("normal");
     autoStartGuestRunRef.current = true;
     playAsGuest();
-  }, [playAsGuest]);
+  }, [playAsGuest, startMusic]);
 
   const checkEnteredWalletAddress = useCallback(async () => {
     if (walletStatus === "connecting" || walletStatus === "checking") return;
@@ -4210,16 +4303,6 @@ export default function BobroToTheMoon({
     setPlayerName(normalizePlayerName(value));
   }, []);
 
-  const playSfx = useCallback((name: SfxName) => {
-    const url = optionalSfxUrls[name];
-
-    if (!url || typeof Audio === "undefined") return;
-
-    const audio = new Audio(url);
-    audio.volume = 0.28;
-    void audio.play().catch(() => undefined);
-  }, []);
-
   const clearCountdownTimeout = useCallback(() => {
     if (countdownTimeoutRef.current !== undefined) {
       window.clearTimeout(countdownTimeoutRef.current);
@@ -4233,43 +4316,23 @@ export default function BobroToTheMoon({
       countdownTimeoutRef.current = window.setTimeout(() => {
         const world = worldRef.current;
         finishCountdownWorld(world);
-        playSfx("pump");
         syncHud(true);
         countdownTimeoutRef.current = undefined;
       }, Math.max(0, delaySeconds) * 1000);
     },
-    [clearCountdownTimeout, playSfx, syncHud],
+    [clearCountdownTimeout, syncHud],
   );
 
   useEffect(() => {
     return () => clearCountdownTimeout();
   }, [clearCountdownTimeout]);
 
-  useEffect(() => {
-    const cueKey = `${hud.status}:${hud.bonusLabel}:${hud.deathMessage}`;
-
-    if (lastAudioCueRef.current === cueKey) return;
-    lastAudioCueRef.current = cueKey;
-
-    if (hud.status === "dead") {
-      playSfx("death");
-      return;
-    }
-
-    if (hud.bonusLabel.includes("CASH") || hud.bonusLabel.includes("HONEY") || hud.bonusLabel.includes("SOL")) {
-      playSfx("bonus");
-    } else if (hud.bonusLabel.includes("RUG") || hud.bonusLabel.includes("RED")) {
-      playSfx("break");
-    } else if (hud.bonusLabel === "PUMP") {
-      playSfx("pump");
-    }
-  }, [hud.bonusLabel, hud.deathMessage, hud.status, playSfx]);
-
   const startGame = useCallback(async () => {
     if (!assetsLoaded) return;
     if (!modeChosen) return;
 
     const currentWorld = worldRef.current;
+    startMusic("normal");
     const runSession = await startRunSession();
     const nextWorld = createWorld(currentWorld.width, currentWorld.height, "countdown");
 
@@ -4281,10 +4344,9 @@ export default function BobroToTheMoon({
     setRunResult(null);
     setSaveStatus("idle");
     setNameError("");
-    playSfx("countdown");
     scheduleCountdownFinish(countdownDuration);
     syncHud(true);
-  }, [assetsLoaded, modeChosen, playSfx, scheduleCountdownFinish, startRunSession, syncHud]);
+  }, [assetsLoaded, modeChosen, scheduleCountdownFinish, startMusic, startRunSession, syncHud]);
 
   useEffect(() => {
     if (!autoStartGuestRunRef.current) return;
@@ -4293,6 +4355,28 @@ export default function BobroToTheMoon({
     autoStartGuestRunRef.current = false;
     void startGame();
   }, [assetsLoaded, mode, modeChosen, startGame]);
+
+  useEffect(() => {
+    const musicMode = getMusicModeForStage(hud.stage);
+
+    if (hud.status === "paused") {
+      pauseMusic();
+      return;
+    }
+
+    if (hud.status === "playing" || hud.status === "countdown") {
+      if (musicMode === "high") {
+        switchToHighLevelMusic();
+      } else {
+        startMusic("normal");
+      }
+      return;
+    }
+
+    if (hud.status === "dead") {
+      stopMusic();
+    }
+  }, [audioMuted, hud.stage, hud.status, pauseMusic, startMusic, stopMusic, switchToHighLevelMusic]);
 
   const returnToStartScreen = useCallback(() => {
     const currentWorld = worldRef.current;
@@ -4309,8 +4393,9 @@ export default function BobroToTheMoon({
     setRunResult(null);
     setSaveStatus("idle");
     setNameError("");
+    stopMusic();
     syncHud(true);
-  }, [clearCountdownTimeout, syncHud]);
+  }, [clearCountdownTimeout, stopMusic, syncHud]);
 
   const togglePause = useCallback(() => {
     const world = worldRef.current;
@@ -4321,7 +4406,6 @@ export default function BobroToTheMoon({
       world.bonusLabel = "PAUSED";
       world.noticeUntil = world.time + 999;
       clearCountdownTimeout();
-      playSfx("pause");
       syncHud(true);
       return;
     }
@@ -4334,10 +4418,9 @@ export default function BobroToTheMoon({
       if (world.status === "countdown") {
         scheduleCountdownFinish(countdownDuration - (world.time - world.countdownStartedAt));
       }
-      playSfx("pause");
       syncHud(true);
     }
-  }, [clearCountdownTimeout, playSfx, scheduleCountdownFinish, syncHud]);
+  }, [clearCountdownTimeout, scheduleCountdownFinish, syncHud]);
 
   const setDirection = useCallback((direction: keyof InputState, isActive: boolean) => {
     inputRef.current = {
@@ -4435,7 +4518,7 @@ export default function BobroToTheMoon({
       const deltaSeconds = Math.min(0.034, Math.max(0, (time - previousTime) / 1000));
       lastFrameTimeRef.current = time;
 
-      updateWorld(worldRef.current, inputRef.current, deltaSeconds, recordRunRef.current);
+      updateWorld(worldRef.current, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
       drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
       syncHud();
 
@@ -4450,7 +4533,7 @@ export default function BobroToTheMoon({
       }
       resizeObserver?.disconnect();
     };
-  }, [selectedHead, syncHud]);
+  }, [playAudioCue, selectedHead, syncHud]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -4598,6 +4681,16 @@ export default function BobroToTheMoon({
           onPointerCancel={handleCanvasPointerEnd}
           onLostPointerCapture={stopPointerDirection}
         />
+
+        <button
+          className={styles.soundToggle}
+          type="button"
+          onClick={toggleAudioMuted}
+          aria-pressed={audioMuted}
+          aria-label={audioMuted ? "Unmute game audio" : "Mute game audio"}
+        >
+          {audioMuted ? "MUTED" : "SOUND ON"}
+        </button>
 
         {hud.bonusLabel ? <div className={styles.bonusNotice}>{hud.bonusLabel}</div> : null}
 

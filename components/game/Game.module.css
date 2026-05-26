@@ -415,6 +415,31 @@
   text-transform: lowercase;
 }
 
+.soundToggle {
+  position: absolute;
+  top: 0.48rem;
+  right: 0.48rem;
+  z-index: 6;
+  min-height: 1.9rem;
+  min-width: 5.4rem;
+  padding: 0.32rem 0.52rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  color: #090909;
+  background: rgba(242, 199, 58, 0.92);
+  box-shadow: 0 4px 0 rgba(91, 72, 31, 0.28);
+  cursor: pointer;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.soundToggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 rgba(91, 72, 31, 0.34);
+}
+
 .bonusNotice {
   position: absolute;
   left: 50%;
@@ -1376,6 +1401,15 @@
   .gameCanvas {
     height: clamp(450px, 72svh, 650px);
     min-height: 0;
+  }
+
+  .soundToggle {
+    top: 0.34rem;
+    right: 0.34rem;
+    min-width: 4.55rem;
+    min-height: 1.64rem;
+    padding: 0.24rem 0.36rem;
+    font-size: 0.48rem;
   }
 
   .gameOverlay {
