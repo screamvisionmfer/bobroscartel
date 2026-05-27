@@ -4335,7 +4335,7 @@ export default function BobroToTheMoon({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName,
-          xHandle: normalizeXHandle(xHandle),
+          xHandle: normalizeXHandle(xHandle) || undefined,
           wallet: walletAddress || playerWallet,
           runId: runResult.runId,
           score: runResult.score,
@@ -4987,17 +4987,17 @@ ${shareUrl}`;
       />
     </label>
 
-    <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
-      <span>X HANDLE</span>
-      <input
-        type="text"
-        inputMode="text"
-        maxLength={15}
-        value={xHandle}
-        onChange={(event) => setXHandle(normalizeXHandle(event.target.value))}
-        placeholder="without @"
-      />
-    </label>
+                    <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
+                      <span>X HANDLE</span>
+                      <input
+                        type="text"
+                        inputMode="text"
+                        maxLength={15}
+                        value={xHandle}
+                        onChange={(event) => setXHandle(normalizeXHandle(event.target.value))}
+                        placeholder="optional"
+                      />
+                    </label>
   </>
 ) : (
   <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
