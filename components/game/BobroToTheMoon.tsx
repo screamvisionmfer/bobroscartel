@@ -8,6 +8,27 @@ const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
+const canvasDprCapDesktop = 1.25;
+const canvasDprCapMobile = 1.05;
+const canvasFrameMsDesktop = 1000 / 55;
+const canvasFrameMsMobile = 1000 / 40;
+const canvasIdleFrameMsDesktop = 1000 / 12;
+const canvasIdleFrameMsMobile = 1000 / 6;
+
+function getCanvasPerformanceProfile(width: number) {
+  const isCoarsePointer =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(pointer: coarse)").matches
+      : false;
+  const isMobileSized = width <= 760 || isCoarsePointer;
+
+  return {
+    dprCap: isMobileSized ? canvasDprCapMobile : canvasDprCapDesktop,
+    activeFrameMs: isMobileSized ? canvasFrameMsMobile : canvasFrameMsDesktop,
+    idleFrameMs: isMobileSized ? canvasIdleFrameMsMobile : canvasIdleFrameMsDesktop,
+  };
+}
+
 const legacyPlayerAssetPath = "/game/bobro-head.png";
 const headAssetPaths = {
   "bobro-head": "/game/heads/bobro-head.png",
@@ -17,6 +38,7 @@ const headAssetPaths = {
   skelebobo: "/game/heads/skelebobo.png",
   diamondbobo: "/game/heads/diamondbobo.png",
   "og-rekt": "/game/heads/og-rekt.png",
+  theoneape: "/game/heads/theoneape.png",
 } as const;
 const backgroundAssetPaths = {
   backalley: "/game/backgrounds/bg-01-backalley.webp",
@@ -39,7 +61,9 @@ const platformAssetPaths = {
   solana: "/game/assets/solana.png",
 } as const;
 const mumuAssetPath = "/game/assets/mumu.png";
-const honeyLifeAssetPath = platformAssetPaths["honey-jar"];
+const evilMumuAssetPath = "/game/assets/evil-mumu.png";
+const honeyLifeAssetPath = "/game/assets/honey.png";
+const jetpackAssetPath = "/game/assets/jetpack.png";
 
 const deathMessages = [
   "HE BOUGHT THE TOP.",
@@ -75,19 +99,20 @@ const stageLabels = [
   "CLOUDS",
   "STORM MARKET",
   "MOON",
-  "CRYPTO ORBIT",
+  "JUNGLE BAY ABYSS",
   "ASCENSION",
   "BILLIONAIRE CLUB",
   "BOBO HEAVEN",
 ] as const;
 const headOptions = [
   { key: "bobro-head", label: "BOBRO", unlockAt: 0, src: headAssetPaths["bobro-head"] },
-  { key: "bobohazard", label: "HAZARD", unlockAt: 5_000_000, src: headAssetPaths.bobohazard },
-  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 10_000_000, src: headAssetPaths["high-bobo"] },
-  { key: "luchador", label: "LUCHADOR", unlockAt: 30_000_000, src: headAssetPaths.luchador },
-  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 250_000_000, src: headAssetPaths.skelebobo },
-  { key: "diamondbobo", label: "DIAMOND BOBO", unlockAt: 4_000_000_000, src: headAssetPaths.diamondbobo },
-  { key: "og-rekt", label: "OG REKT", unlockAt: 6_900_000_000, src: headAssetPaths["og-rekt"] },
+  { key: "bobohazard", label: "HAZARD", unlockAt: 50_000_000, src: headAssetPaths.bobohazard },
+  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 100_000_000, src: headAssetPaths["high-bobo"] },
+  { key: "luchador", label: "LUCHADOR", unlockAt: 500_000_000, src: headAssetPaths.luchador },
+  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 4_000_000_000, src: headAssetPaths.skelebobo },
+  { key: "diamondbobo", label: "DIAMOND", unlockAt: 8_000_000_000, src: headAssetPaths.diamondbobo },
+  { key: "og-rekt", label: "OG REKT", unlockAt: 69_000_000_000, src: headAssetPaths["og-rekt"] },
+  { key: "theoneape", label: "The JB Ape", unlockAt: 420_000_000_000, src: headAssetPaths["theoneape"] },
 ] as const;
 function getWalletStorageId(wallet = "") {
   return wallet ? wallet.replace(/[^a-zA-Z0-9]/g, "").slice(0, 44) : "unknown-wallet";
@@ -112,7 +137,7 @@ const backgroundParallax: Record<keyof typeof backgroundAssetPaths, number> = {
   clouds: 0.011,
   "storm-market": 0.01,
   moon: 0.009,
-  "crypto-orbit": 0.008,
+  "crypto-orbit": 0.01,
   ascension: 0.007,
   "billionaire-club": 0.006,
   "bobo-heaven": 0.005,
@@ -134,7 +159,9 @@ type LoadedAssets = {
   backgrounds: ImageMap<BackgroundKey>;
   platforms: ImageMap<PlatformKind>;
   honeyLife: HTMLImageElement | null;
+  jetpack: HTMLImageElement | null;
   mumu: HTMLImageElement | null;
+  evilMumu: HTMLImageElement | null;
 };
 
 type FloatingText = {
@@ -395,7 +422,7 @@ const jetpackVelocity = 1620;
 const jetpackBoostDuration = 0.62;
 const onFireDuration = 5;
 const marketCrashDuration = 10;
-const mumuUnlockScore = 20000;
+const mumuUnlockScore = 300000;
 const mumuWarningDuration = 0.58;
 const honeyLifeMilestoneInterval = 1_000_000;
 const honeyLifeMax = 3;
@@ -434,12 +461,12 @@ function clamp(value: number, min: number, max: number) {
 
 const biomeDefinitions: Array<{ key: BackgroundKey; label: StageLabel; min: number; fallback: string }> = [
   { key: "backalley", label: "BACKALLEY", min: 0, fallback: "#213141" },
-  { key: "rooftops", label: "ROOFTOPS", min: 250_000, fallback: "#415d7a" },
+  { key: "rooftops", label: "ROOFTOPS", min: 350_000, fallback: "#415d7a" },
   { key: "sky-ascent", label: "SKY ASCENT", min: 1_000_000, fallback: "#72b8e6" },
   { key: "clouds", label: "CLOUDS", min: 5_000_000, fallback: "#9ed4ef" },
   { key: "storm-market", label: "STORM MARKET", min: 25_000_000, fallback: "#576270" },
   { key: "moon", label: "MOON", min: 100_000_000, fallback: "#29303e" },
-  { key: "crypto-orbit", label: "CRYPTO ORBIT", min: 500_000_000, fallback: "#151b35" },
+  { key: "crypto-orbit", label: "JUNGLE BAY ABYSS", min: 500_000_000, fallback: "#151b35" },
   { key: "ascension", label: "ASCENSION", min: 2_000_000_000, fallback: "#d6c076" },
   { key: "billionaire-club", label: "BILLIONAIRE CLUB", min: 10_000_000_000, fallback: "#6f4f2f" },
   { key: "bobo-heaven", label: "BOBO HEAVEN", min: 69_000_000_000, fallback: "#eac85e" },
@@ -472,14 +499,12 @@ function formatMarketCap(score: number) {
 function normalizePlayerName(value: string) {
   return value.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 16);
 }
-
 function normalizeXHandle(value: string) {
   return value
     .replace(/^@+/, "")
     .replace(/[^a-zA-Z0-9_]/g, "")
     .slice(0, 15);
 }
-
 function hasUrlLikeText(value: string) {
   return /https?:\/\/|www\.|[a-z0-9-]+\.(?:com|net|org|io|gg|xyz|lol|app)\b/i.test(value);
 }
@@ -596,6 +621,11 @@ function pushFloatingText(world: World, text: string, x: number, y: number, colo
     createdAt: world.time,
   });
   world.nextFeedbackId += 1;
+
+  const feedbackLimit = isMobileWorld(world) ? 6 : 12;
+  if (world.feedbackTexts.length > feedbackLimit) {
+    world.feedbackTexts.splice(0, world.feedbackTexts.length - feedbackLimit);
+  }
 }
 
 function getDifficulty(altitude: number) {
@@ -1204,7 +1234,7 @@ function maxMumuCount(score: number) {
 function redMumuChance(world: World) {
   const tier = getBiomeTier(world);
 
-  if (tier < 6) return 0;
+  if (tier < 6) return 0.04;
   if (tier === 6) return 0.14;
   if (tier === 7) return 0.24;
   if (tier === 8) return 0.34;
@@ -1613,8 +1643,9 @@ function addPaperParticles(world: World, x: number, y: number, color: string, co
     world.nextParticleId += 1;
   }
 
-  if (world.particles.length > particleLimit) {
-    world.particles.splice(0, world.particles.length - particleLimit);
+  const maxParticles = isMobileWorld(world) ? 22 : particleLimit;
+  if (world.particles.length > maxParticles) {
+    world.particles.splice(0, world.particles.length - maxParticles);
   }
 }
 
@@ -1635,16 +1666,23 @@ function reactToLanding(world: World, platform: Platform, color: string, power: 
 }
 
 function updateParticles(world: World, deltaSeconds: number) {
-  world.particles = world.particles.filter((particle) => {
+  let writeIndex = 0;
+
+  for (let index = 0; index < world.particles.length; index += 1) {
+    const particle = world.particles[index];
     const age = world.time - particle.createdAt;
-    if (age > particle.lifetime) return false;
+    if (age > particle.lifetime) continue;
 
     particle.x += particle.vx * deltaSeconds;
     particle.y += particle.vy * deltaSeconds;
     particle.vy -= 220 * deltaSeconds;
     particle.vx *= Math.max(0, 1 - deltaSeconds * 2.8);
-    return true;
-  });
+
+    world.particles[writeIndex] = particle;
+    writeIndex += 1;
+  }
+
+  world.particles.length = writeIndex;
 }
 
 function endRun(world: World, recordRun: (world: World) => void, playAudioCue?: (cue: GameAudioCue) => void) {
@@ -2157,8 +2195,8 @@ function activateOnFire(world: World, playAudioCue?: (cue: GameAudioCue) => void
   world.cameraKick = Math.max(world.cameraKick, 8);
   triggerHitStop(world, 0.05);
   addPaperParticles(world, world.player.x, world.player.y, "#e05b2d", 16, 1.5);
-  triggerNotice(world, "ON FIRE", 1.5);
-  pushFloatingText(world, "ON FIRE", world.player.x, world.player.y + 48, "#e05b2d");
+  triggerNotice(world, "BOBOCLAAAAAT MODE", 1.5);
+  pushFloatingText(world, "BOBOCLAAAAAT MODE", world.player.x, world.player.y + 48, "#e05b2d");
   playAudioCue?.("onFire");
 }
 
@@ -2227,7 +2265,15 @@ function updateWorld(
   if (Math.abs(world.cameraKick) < 0.05) {
     world.cameraKick = 0;
   }
-  world.feedbackTexts = world.feedbackTexts.filter((feedback) => world.time - feedback.createdAt < feedbackLifetime);
+  let feedbackWriteIndex = 0;
+  for (let index = 0; index < world.feedbackTexts.length; index += 1) {
+    const feedback = world.feedbackTexts[index];
+    if (world.time - feedback.createdAt >= feedbackLifetime) continue;
+    world.feedbackTexts[feedbackWriteIndex] = feedback;
+    feedbackWriteIndex += 1;
+  }
+  world.feedbackTexts.length = feedbackWriteIndex;
+
   updateParticles(world, deltaSeconds);
 
   if (world.noticeUntil < world.time) {
@@ -2336,7 +2382,7 @@ function updateWorld(
         platform.state = "breaking";
         platform.breakStartedAt = world.time;
         ensureReachablePathPlatform(world);
-        nextJumpVelocity = jumpVelocity * 0.92;
+        nextJumpVelocity = jumpVelocity * 0.62;
         world.shakePower = Math.max(world.shakePower, 4);
         reactToLanding(world, platform, "#d4aa4c", 0.08, 6);
         triggerNotice(world, "RUG!", 1.05);
@@ -2346,7 +2392,7 @@ function updateWorld(
 
       if (platform.kind === "honey-jar") {
         world.scoreMultiplierUntil = Math.max(world.scoreMultiplierUntil, world.time + 4);
-        nextJumpVelocity = jumpVelocity * 1.02;
+        nextJumpVelocity = jumpVelocity * 1.22;
         world.shakePower = Math.max(world.shakePower, 2);
         world.flashPower = Math.max(world.flashPower, 0.2);
         reactToLanding(world, platform, "#e4b745", 0.055, 5);
@@ -2369,11 +2415,60 @@ function updateWorld(
       }
 
       if (platform.kind === "solana") {
-        nextJumpVelocity = Math.max(nextJumpVelocity, jumpVelocity * 1.1 + difficulty * 12);
-        world.shakePower = Math.max(world.shakePower, 3);
-        reactToLanding(world, platform, "#8f6ed5", 0.075, 7);
-        triggerNotice(world, "SOL BOOST", 1.2);
-        pushFloatingText(world, "SOL BOOST", platform.x + platform.width / 2, platform.y + 28, "#8f6ed5");
+        const roll = Math.random();
+
+        let pumpLabel = "PUMP!";
+        let pumpColor = "#39d98a";
+        let pumpMultiplier = 1.12;
+        let pumpShake = 4;
+        let pumpFlash = 0.08;
+        let breaksAfterPump = false;
+
+        if (roll < 0.05) {
+          pumpLabel = "GOD CANDLE";
+          pumpMultiplier = 5.55;
+          pumpShake = 52;
+          pumpFlash = 0.5;
+        } else if (roll < 0.34) {
+          pumpLabel = "PUMP PUMP PUMP";
+          pumpMultiplier = 1.32;
+          pumpShake = 8;
+          pumpFlash = 0.15;
+        } else if (roll < 0.52) {
+          pumpLabel = "DEV SOLD";
+          pumpMultiplier = 0.42;
+          pumpColor = "#b94b3e";
+          pumpShake = 7;
+          pumpFlash = 0.12;
+        } else if (roll < 0.60) {
+          pumpLabel = "OH SHIT";
+          pumpMultiplier = 0.46;
+          pumpColor = "#e4b745";
+          pumpShake = 9;
+          pumpFlash = 0.14;
+        } else if (roll < 0.85) {
+          pumpLabel = "RUGGED AFTER PUMP";
+          pumpMultiplier = 0.05;
+          pumpColor = "#d4aa4c";
+          pumpShake = 10;
+          pumpFlash = 0.16;
+          breaksAfterPump = true;
+        }
+
+        const pumpVelocity = Math.max(jumpVelocity * 0.86, jumpVelocity * pumpMultiplier + difficulty * 18);
+        nextJumpVelocity = Math.max(nextJumpVelocity, pumpVelocity);
+
+        if (breaksAfterPump) {
+          platform.state = "breaking";
+          platform.breakStartedAt = world.time;
+          ensureReachablePathPlatform(world);
+        }
+
+        world.shakePower = Math.max(world.shakePower, pumpShake);
+        world.flashPower = Math.max(world.flashPower, pumpFlash);
+        reactToLanding(world, platform, pumpColor, 0.085, pumpShake);
+        triggerNotice(world, pumpLabel, 1.15);
+        pushFloatingText(world, pumpLabel, platform.x + platform.width / 2, platform.y + 28, pumpColor);
         playAudioCue?.("solanaPlatform");
       }
 
@@ -2640,7 +2735,10 @@ function drawPosterBackgroundImage(
   const localProgress = getBiomeLocalProgress(getBiomeProgress(world), background);
   const parallax = backgroundParallax[background];
   const drift = clamp(localProgress * extraHeight * 0.78 + world.cameraY * parallax, 0, extraHeight * 0.82);
-  const y = clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
+  const anchorToBottom = background === "crypto-orbit";
+  const y = anchorToBottom
+    ? clamp(-extraHeight + drift * 0.95, -extraHeight, 0)
+    : clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
 
   context.drawImage(image, x, y, drawWidth, drawHeight);
 
@@ -2941,9 +3039,9 @@ function drawPlatform(context: CanvasRenderingContext2D, world: World, platform:
       "green-candle": { widthPad: 16, height: 38, yOffset: 14 },
       "red-candle": { widthPad: 16, height: 38, yOffset: 14 },
       rug: { widthPad: 18, height: 42, yOffset: 16 },
-      "honey-jar": { widthPad: 18, height: 44, yOffset: 17 },
-      "cash-stack": { widthPad: 26, height: 58, yOffset: 22 },
-      solana: { widthPad: 18, height: 40, yOffset: 15 },
+      "honey-jar": { widthPad: 16, height: 32, yOffset: 17 },
+      "cash-stack": { widthPad: 16, height: 48, yOffset: 22 },
+      solana: { widthPad: 16, height: 40, yOffset: 15 },
     };
     const box = spriteScale[platform.kind];
     const drawWidth = platform.width + box.widthPad;
@@ -3028,7 +3126,12 @@ function drawPlatform(context: CanvasRenderingContext2D, world: World, platform:
   context.restore();
 }
 
-function drawJetpack(context: CanvasRenderingContext2D, world: World, collectible: Collectible) {
+function drawJetpack(
+  context: CanvasRenderingContext2D,
+  world: World,
+  collectible: Collectible,
+  image?: HTMLImageElement | null,
+) {
   const y = screenY(world, collectible.y);
 
   if (y < -70 || y > world.height + 70) return;
@@ -3038,35 +3141,40 @@ function drawJetpack(context: CanvasRenderingContext2D, world: World, collectibl
   context.save();
   context.translate(collectible.x, y + bob);
 
-  context.globalAlpha = 0.18 + Math.sin(world.time * 7 + collectible.phase) * 0.04;
-  context.fillStyle = "#e4b745";
-  context.fillRect(-23, -27, 46, 54);
+  if (image?.complete && image.naturalWidth > 0 && image.naturalHeight > 0) {
+    context.drawImage(image, -26, -30, 52, 60);
+  } else {
+    context.globalAlpha = 0.18 + Math.sin(world.time * 7 + collectible.phase) * 0.04;
+    context.fillStyle = "#e4b745";
+    context.fillRect(-23, -27, 46, 54);
 
-  context.globalAlpha = 1;
-  context.fillStyle = "#f4e4b2";
-  context.fillRect(-13, -18, 26, 30);
-  context.strokeStyle = "#130e0c";
-  context.lineWidth = 3;
-  context.strokeRect(-13, -18, 26, 30);
+    context.globalAlpha = 1;
+    context.fillStyle = "#f4e4b2";
+    context.fillRect(-13, -18, 26, 30);
+    context.strokeStyle = "#130e0c";
+    context.lineWidth = 3;
+    context.strokeRect(-13, -18, 26, 30);
 
-  context.fillStyle = "#b94b3e";
-  context.fillRect(-20, -11, 9, 30);
-  context.fillRect(11, -11, 9, 30);
-  context.strokeRect(-20, -11, 9, 30);
-  context.strokeRect(11, -11, 9, 30);
+    context.fillStyle = "#b94b3e";
+    context.fillRect(-20, -11, 9, 30);
+    context.fillRect(11, -11, 9, 30);
+    context.strokeRect(-20, -11, 9, 30);
+    context.strokeRect(11, -11, 9, 30);
 
-  context.fillStyle = "#8ba65b";
-  context.fillRect(-7, -25, 14, 9);
-  context.strokeRect(-7, -25, 14, 9);
+    context.fillStyle = "#8ba65b";
+    context.fillRect(-7, -25, 14, 9);
+    context.strokeRect(-7, -25, 14, 9);
 
-  context.fillStyle = "#e4b745";
-  context.fillRect(-15, 20, 8, 11 + Math.sin(world.time * 10) * 3);
-  context.fillRect(7, 20, 8, 11 + Math.cos(world.time * 10) * 3);
-  context.fillStyle = "#130e0c";
-  context.font = "700 8px Courier New, monospace";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText("JET", 0, -1);
+    context.fillStyle = "#e4b745";
+    context.fillRect(-15, 20, 8, 11 + Math.sin(world.time * 10) * 3);
+    context.fillRect(7, 20, 8, 11 + Math.cos(world.time * 10) * 3);
+    context.fillStyle = "#130e0c";
+    context.font = "700 8px Courier New, monospace";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("JET", 0, -1);
+  }
+
   context.restore();
 }
 
@@ -3094,11 +3202,11 @@ function drawRedPill(context: CanvasRenderingContext2D, world: World, collectibl
   context.restore();
 }
 
-function drawCollectibles(context: CanvasRenderingContext2D, world: World) {
+function drawCollectibles(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets) {
   for (const collectible of world.collectibles) {
     if (!collectible.collected) {
       if (collectible.kind === "jetpack") {
-        drawJetpack(context, world, collectible);
+        drawJetpack(context, world, collectible, assets.jetpack);
       } else {
         drawRedPill(context, world, collectible);
       }
@@ -3215,21 +3323,34 @@ function drawSingleMumu(context: CanvasRenderingContext2D, world: World, image: 
     context.fillRect(-mumu.width / 2, -mumu.height / 2, mumu.width, mumu.height);
     context.globalCompositeOperation = "source-over";
     context.globalAlpha = 0.85;
-    context.strokeStyle = "#f05b51";
     context.lineWidth = 3;
-    context.strokeRect(-mumu.width / 2 + 8, -mumu.height / 2 + 8, mumu.width - 16, mumu.height - 16);
   }
 
   context.restore();
 }
 
-function drawMumu(context: CanvasRenderingContext2D, world: World, image: HTMLImageElement | null) {
+function drawMumu(
+  context: CanvasRenderingContext2D,
+  world: World,
+  image: HTMLImageElement | null,
+  evilImage: HTMLImageElement | null,
+) {
   if (world.mumu) {
-    drawSingleMumu(context, world, image, world.mumu);
+    drawSingleMumu(
+      context,
+      world,
+      world.mumu.variant === "red" ? evilImage ?? image : image,
+      world.mumu,
+    );
   }
 
   if (world.mumu2) {
-    drawSingleMumu(context, world, image, world.mumu2);
+    drawSingleMumu(
+      context,
+      world,
+      world.mumu2.variant === "red" ? evilImage ?? image : image,
+      world.mumu2,
+    );
   }
 }
 
@@ -3297,7 +3418,7 @@ function drawOnFireCanvasEffects(context: CanvasRenderingContext2D, world: World
   }
 
   context.globalAlpha = 0.92;
-  drawPixelText(context, "ON FIRE", world.width / 2, world.height * 0.22, 30, "#e4b745");
+  drawPixelText(context, "BOBOCLAAAAAT MODE", world.width / 2, world.height * 0.22, 30, "#e4b745");
   context.restore();
 }
 
@@ -3440,6 +3561,7 @@ function drawGameParticles(context: CanvasRenderingContext2D, world: World) {
 }
 
 function drawWorld(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, selectedHead: HeadKey) {
+  const lowFx = world.width <= 760;
   context.clearRect(0, 0, world.width, world.height);
 
   context.save();
@@ -3458,29 +3580,37 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
   }
 
   drawBackground(context, world, assets);
-  drawMarketCrashCanvasEffects(context, world);
+  if (!lowFx) {
+    drawMarketCrashCanvasEffects(context, world);
+  }
 
-  const sortedPlatforms = [...world.platforms].sort((left, right) => left.y - right.y);
-  for (const platform of sortedPlatforms) {
+  const visibleMinY = world.cameraY - world.height - 260;
+  const visibleMaxY = world.cameraY + world.height + 260;
+  for (const platform of world.platforms) {
+    if (platform.y < visibleMinY || platform.y > visibleMaxY) continue;
     drawPlatform(context, world, platform, assets);
   }
 
-  drawCollectibles(context, world);
+  drawCollectibles(context, world, assets);
   drawHoneyLife(context, world, assets.honeyLife ?? assets.platforms["honey-jar"]);
-  drawMumu(context, world, assets.mumu);
-  drawOnFireCanvasEffects(context, world);
+  drawMumu(context, world, assets.mumu, assets.evilMumu);
+  if (!lowFx) {
+    drawOnFireCanvasEffects(context, world);
+  }
   drawGameParticles(context, world);
   drawPlayer(context, world, resolvePlayerImage(assets, selectedHead));
   drawFloatingFeedback(context, world);
   context.restore();
 
-  context.save();
-  context.globalAlpha = 0.08;
-  context.fillStyle = "#000000";
-  for (let y = 0; y < world.height; y += 5) {
-    context.fillRect(0, y, world.width, 1);
+  if (!lowFx) {
+    context.save();
+    context.globalAlpha = 0.08;
+    context.fillStyle = "#000000";
+    for (let y = 0; y < world.height; y += 5) {
+      context.fillRect(0, y, world.width, 1);
+    }
+    context.restore();
   }
-  context.restore();
 
   if (world.flashPower > 0.01) {
     context.save();
@@ -3517,8 +3647,8 @@ function scoreCardTheme(stage: StageLabel) {
       return { top: "#a54848", middle: "#e19879", bottom: "#391d28", accent: "#f2c73a", shadow: "#6f252f", badge: "PANIC SURVIVOR" };
     case "MOON":
       return { top: "#172b55", middle: "#8ea9d8", bottom: "#f2e6bf", accent: "#f2c73a", shadow: "#10172e", badge: "MOON SURVIVOR" };
-    case "CRYPTO ORBIT":
-      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "ORBIT LEGEND" };
+    case "JUNGLE BAY ABYSS":
+      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "JUNGLE BAY LEGEND" };
     case "ASCENSION":
       return { top: "#f2c73a", middle: "#fff0b8", bottom: "#d58e4d", accent: "#6ead47", shadow: "#9b6b18", badge: "ASCENSION RUN" };
     case "BILLIONAIRE CLUB":
@@ -3760,37 +3890,13 @@ type HolderResponse = {
   bobrosCount: number;
 };
 
-type WalletStatus = "idle" | "connecting" | "checking" | "holder" | "denied" | "error";
-
-type SolanaWalletProvider = {
-  publicKey?: { toString: () => string };
-  connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
-};
-
-function getBrowserSolanaProvider() {
-  if (typeof window === "undefined") return undefined;
-
-  return (window as Window & { solana?: SolanaWalletProvider }).solana;
-}
+type WalletStatus = "idle" | "checking" | "holder" | "denied" | "error";
 
 function getGameShareUrl() {
   if (configuredSiteUrl) return `${configuredSiteUrl}/game`;
   if (typeof window !== "undefined") return `${window.location.origin}/game`;
 
   return fallbackGameShareUrl;
-}
-
-async function connectWallet() {
-  const provider = getBrowserSolanaProvider();
-
-  if (provider?.connect) {
-    const result = await provider.connect();
-    const wallet = result.publicKey?.toString() ?? provider.publicKey?.toString();
-
-    if (wallet) return wallet;
-  }
-
-  return playerWallet;
 }
 
 async function checkHolder(wallet: string) {
@@ -3841,7 +3947,16 @@ export default function BobroToTheMoon({
   const autoStartGuestRunRef = useRef(false);
   const bestTodayRef = useRef(0);
   const recordRunRef = useRef<(world: World) => void>(() => undefined);
-  const assetsRef = useRef<LoadedAssets>({ heads: {}, fallbackHead: null, backgrounds: {}, platforms: {}, honeyLife: null, mumu: null });
+  const assetsRef = useRef<LoadedAssets>({
+    heads: {},
+    fallbackHead: null,
+    backgrounds: {},
+    platforms: {},
+    honeyLife: null,
+    jetpack: null,
+    mumu: null,
+    evilMumu: null,
+  });
   const countdownTimeoutRef = useRef<number | undefined>(undefined);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
   const [mode, setMode] = useState<GameMode>("guest");
@@ -3865,7 +3980,7 @@ export default function BobroToTheMoon({
     const world = worldRef.current;
     const displayScore = getDisplayScore(world);
     const statusLabels = [
-      ...(isOnFire(world) ? ["ON FIRE"] : []),
+      ...(isOnFire(world) ? ["BOBOCLAAAAAT MODE"] : []),
       ...(isMarketCrashActive(world) ? ["MARKET PANIC"] : []),
       ...(isIntoxicated(world) ? ["INTOXICATED"] : []),
     ];
@@ -3971,12 +4086,14 @@ export default function BobroToTheMoon({
     let isCancelled = false;
 
     const loadAssets = async () => {
-      const [headEntries, backgroundEntries, platformEntries, honeyLifeImage, mumuImage] = await Promise.all([
+      const [headEntries, backgroundEntries, platformEntries, honeyLifeImage, jetpackImage, mumuImage, evilMumuImage] = await Promise.all([
         Promise.all(Object.entries(headAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         Promise.all(Object.entries(backgroundAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         Promise.all(Object.entries(platformAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
         loadCanvasImage(honeyLifeAssetPath),
+        loadCanvasImage(jetpackAssetPath),
         loadCanvasImage(mumuAssetPath),
+        loadCanvasImage(evilMumuAssetPath),
       ]);
 
       if (isCancelled) return;
@@ -3992,7 +4109,9 @@ export default function BobroToTheMoon({
         backgrounds: Object.fromEntries(backgroundEntries.filter((entry) => entry[1])) as ImageMap<BackgroundKey>,
         platforms: Object.fromEntries(platformEntries.filter((entry) => entry[1])) as ImageMap<PlatformKind>,
         honeyLife: honeyLifeImage,
+        jetpack: jetpackImage,
         mumu: mumuImage,
+        evilMumu: evilMumuImage,
       };
       setAssetsLoaded(true);
     };
@@ -4021,7 +4140,7 @@ export default function BobroToTheMoon({
 
     setSelectedHead(head);
     window.localStorage.setItem(getHeadStorageKey(walletAddress), head);
-  }, [bestUnlockScore, mode, walletAddress, xHandle]);
+  }, [bestUnlockScore, mode, walletAddress]);
 
   const activateHolderAccess = useCallback(
     (wallet: string, count: number) => {
@@ -4065,36 +4184,6 @@ export default function BobroToTheMoon({
     onAccessChange?.({ mode: "guest" });
   }, [loadProgressForMode, onAccessChange]);
 
-  const connectHolderWallet = useCallback(async () => {
-    if (walletStatus === "connecting" || walletStatus === "checking") return;
-
-    autoStartGuestRunRef.current = false;
-    setWalletStatus("connecting");
-    setAccessMessage("");
-
-    try {
-      const wallet = await connectWallet();
-      setWalletAddress(wallet);
-      setManualWalletAddress(wallet);
-      setWalletStatus("checking");
-
-      const holder = await checkHolder(wallet);
-
-      if (holder.isHolder) {
-        activateHolderAccess(wallet, holder.bobrosCount);
-        return;
-      }
-
-      activateGuestAccess("NO BOBRO NFT DETECTED. You can still play as guest.");
-    } catch {
-      setMode("guest");
-      setModeChosen(false);
-      setWalletStatus("error");
-      setAccessMessage("Wallet check unavailable. You can still play as guest.");
-      onAccessChange?.({ mode: "guest" });
-    }
-  }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
-
   const startGuestRunFromMenu = useCallback(() => {
     startMusic("normal");
     autoStartGuestRunRef.current = true;
@@ -4102,7 +4191,7 @@ export default function BobroToTheMoon({
   }, [playAsGuest, startMusic]);
 
   const checkEnteredWalletAddress = useCallback(async () => {
-    if (walletStatus === "connecting" || walletStatus === "checking") return;
+    if (walletStatus === "checking") return;
 
     autoStartGuestRunRef.current = false;
     const wallet = normalizeWalletInput(manualWalletAddress);
@@ -4279,7 +4368,7 @@ export default function BobroToTheMoon({
     } catch {
       setSaveStatus("error");
     }
-  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress]);
+  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress, xHandle]);
 
   const shareRunOnX = useCallback(() => {
     if (!runResult) return;
@@ -4290,9 +4379,9 @@ export default function BobroToTheMoon({
 
 Think you can beat my run?
 
-🏆 Weekly rewards for Bobros holders
+🏆 Weekly rewards for @bobroscartel holders
 🥇 #1 wins a Bobros NFT
-🎟 Top 3 get whitelist
+🎟 Top 3 get whitelist with special Bobros mint price
 
 Play:
 ${shareUrl}`;
@@ -4510,14 +4599,26 @@ ${shareUrl}`;
     const context = canvas.getContext("2d");
     if (!context) return undefined;
 
+    let activeFrameMs = canvasFrameMsDesktop;
+    let idleFrameMs = canvasIdleFrameMsDesktop;
+
     const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
       const nextWidth = Math.max(300, Math.floor(rect.width || defaultWidth));
       const nextHeight = Math.max(460, Math.floor(rect.height || defaultHeight));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const performanceProfile = getCanvasPerformanceProfile(nextWidth);
+      const dpr = Math.min(window.devicePixelRatio || 1, performanceProfile.dprCap);
+      activeFrameMs = performanceProfile.activeFrameMs;
+      idleFrameMs = performanceProfile.idleFrameMs;
 
-      canvas.width = Math.floor(nextWidth * dpr);
-      canvas.height = Math.floor(nextHeight * dpr);
+      const nextCanvasWidth = Math.floor(nextWidth * dpr);
+      const nextCanvasHeight = Math.floor(nextHeight * dpr);
+
+      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
+        canvas.width = nextCanvasWidth;
+        canvas.height = nextCanvasHeight;
+      }
+
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       resizeWorld(worldRef.current, nextWidth, nextHeight);
       drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
@@ -4530,12 +4631,21 @@ ${shareUrl}`;
     resizeObserver?.observe(canvas);
 
     const tick = (time: number) => {
+      const world = worldRef.current;
+      const isActiveRun = world.status === "playing" || world.status === "countdown";
+      const targetFrameMs = isActiveRun ? activeFrameMs : idleFrameMs;
+
+      if (lastFrameTimeRef.current !== null && time - lastFrameTimeRef.current < targetFrameMs) {
+        animationFrameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
       const previousTime = lastFrameTimeRef.current ?? time;
       const deltaSeconds = Math.min(0.034, Math.max(0, (time - previousTime) / 1000));
       lastFrameTimeRef.current = time;
 
-      updateWorld(worldRef.current, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
-      drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
+      updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
+      drawWorld(context, world, assetsRef.current, selectedHead);
       syncHud();
 
       animationFrameRef.current = window.requestAnimationFrame(tick);
@@ -4746,72 +4856,59 @@ ${shareUrl}`;
               <div className={styles.readyMenu} aria-label="BOBRO TO THE MOON start menu">
                 <div className={styles.menuAccessPanel}>
                   <div className={styles.menuIntro}>
-                    <span>WEEKLY BOUNTY</span>
+                    <span>HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD</span>
                     <div className={styles.prizeStrip} aria-label="Weekly contest rewards">
-                      <b>#1 WINS NFT</b>
-                      <b>TOP 3 WL</b>
+                      <b>#1 WINS BOBROS NFT</b>
+                      <b>TOP 3 GET WHITELIST</b>
+                      <b>HOLDER REWARDS</b>
                     </div>
                   </div>
 
-                  <button
-                    className={`${styles.startButton} ${styles.primaryRunButton} ${isHolderMode ? styles.bountyRunButton : ""}`}
-                    type="button"
-                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
-                    disabled={modeChosen && !assetsLoaded}
-                  >
-                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : readyStartLabel}
-                  </button>
+                 
 
-                  {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
-
-                  <div className={styles.holderTerminal} aria-label="Holder access">
-                    <div className={styles.terminalHeader}>
-                      <strong>BOUNTY ACCESS</strong>
-                      <span>OPTIONAL</span>
-                    </div>
-                    <div className={styles.holderQuickActions}>
-                      <button
-                        className={styles.startButton}
-                        type="button"
-                        onClick={connectHolderWallet}
-                        disabled={walletStatus === "connecting" || walletStatus === "checking"}
-                      >
-                        {walletStatus === "connecting" ? "CONNECTING" : walletStatus === "checking" ? "CHECKING" : "CONNECT"}
-                      </button>
-                      <label className={styles.walletEntry}>
-                        <span>OR PASTE HOLDER WALLET</span>
-                        <div>
-                          <input
-                            type="text"
-                            inputMode="text"
-                            autoComplete="off"
-                            spellCheck={false}
-                            placeholder="SOLANA WALLET"
-                            value={manualWalletAddress}
-                            onChange={(event) => setManualWalletAddress(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                event.preventDefault();
-                                void checkEnteredWalletAddress();
-                              }
-                            }}
-                          />
-                          <button
-                            className={styles.startButton}
-                            type="button"
-                            onClick={checkEnteredWalletAddress}
-                            disabled={walletStatus === "connecting" || walletStatus === "checking"}
-                          >
-                            {walletStatus === "checking" ? "..." : "VERIFY"}
-                          </button>
-                        </div>
-                      </label>
-                    </div>
-                    <small className={styles.guestNote}>No wallet connection required for paste mode.</small>
+                  <div className={styles.holderTerminal} aria-label="Holder wallet check">
+                    <label className={styles.walletEntry}>
+                      <span>VERIFY HOLDER ADDRESS FOR WEEKLY REWARDS</span>
+                      <div>
+                        <input
+                          type="text"
+                          inputMode="text"
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder="PASTE HOLDER WALLET ADDRESS"
+                          value={manualWalletAddress}
+                          onChange={(event) => setManualWalletAddress(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void checkEnteredWalletAddress();
+                            }
+                          }}
+                        />
+                        <button
+                          className={styles.startButton}
+                          type="button"
+                          onClick={checkEnteredWalletAddress}
+                          disabled={walletStatus === "checking"}
+                        >
+                          {walletStatus === "checking" ? "..." : "VERIFY"}
+                        </button>
+                      </div>
+                    </label>
+                    
+                    {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
                     {accessMessage ? (
                       <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                     ) : null}
                   </div>
+                  <button
+                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
+                    type="button"
+                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
+                    disabled={modeChosen && !assetsLoaded}
+                  >
+                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
+                  </button>
                 </div>
 
                 <div className={styles.menuSkinPanel}>
@@ -4875,22 +4972,37 @@ ${shareUrl}`;
                     <dd>{result.honeyLivesCollected} EXTRA / {result.livesUsed} SAVES</dd>
                   </div>
                 </dl>
-                {result.mode === "holder" ? (
-                  <label className={styles.nameEntry}>
-                    <span>ENTER YOUR NAME</span>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      maxLength={16}
-                      value={playerName}
-                      onChange={(event) => updatePlayerName(event.target.value)}
-                      onBlur={commitPlayerName}
-                      aria-invalid={Boolean(nameError)}
-                    />
-                  </label>
-                ) : (
-                  <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
-                )}
+             {result.mode === "holder" ? (
+  <>
+    <label className={styles.nameEntry}>
+      <span>ENTER YOUR NAME</span>
+      <input
+        type="text"
+        inputMode="text"
+        maxLength={16}
+        value={playerName}
+        onChange={(event) => updatePlayerName(event.target.value)}
+        onBlur={commitPlayerName}
+        aria-invalid={Boolean(nameError)}
+      />
+    </label>
+
+    <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
+      <span>X HANDLE</span>
+      <input
+        type="text"
+        inputMode="text"
+        maxLength={15}
+        value={xHandle}
+        onChange={(event) => setXHandle(normalizeXHandle(event.target.value))}
+        placeholder="without @"
+      />
+    </label>
+  </>
+) : (
+  <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
+)}
+                
                 {nameError ? <small className={styles.formError}>{nameError}</small> : null}
                 {runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
                 {result.mode === "holder" && result.leaderboardEligible ? (
@@ -4930,7 +5042,7 @@ ${shareUrl}`;
         ) : null}
       </div>
 
-      <span className={styles.gameCredit}>built by scream.vision</span>
+      <span className={styles.gameCredit}>bobro to the moon v1.0</span>
 
       <div className={styles.gameActions}>
         <button
