@@ -108,32 +108,21 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
     <aside className={styles.leaderboard} aria-label="Weekly leaderboard">
       <div className={styles.leaderboardHeader}>
         <span className={styles.kicker}>Current Week: {leaderboard?.weekId ?? "LOADING"}</span>
-        <h2>WEEKLY BOUNTY BOARD</h2>
+        <h2>BOUNTY BOARD</h2>
         <small>Manual review before rewards</small>
       </div>
 
-      <section className={styles.contestPanel} aria-label="Weekly contest rules">
-        <div>
-          <strong>WEEKLY BOUNTY BOARD</strong>
-          <span>{leaderboard?.weekId ?? "CURRENT WEEK"}</span>
-        </div>
+      <section className={styles.rewardPanel} aria-label="Weekly rewards">
+        <h3>WEEKLY REWARDS</h3>
         <p>
-          <span>#1 weekly score</span>
-          <b>wins 2 Bobros NFT</b>
+          <span>#1</span>
+          <strong>2 Bobros NFT</strong>
         </p>
         <p>
           <span>Top 3</span>
-          <b>receive whitelist spots</b>
+          <strong>Whitelist spots with special mint price</strong>
         </p>
-        <p>
-          <span>Holder wallet</span>
-          <b>required</b>
-        </p>
-        <p>
-          <span>Entries</span>
-          <b>reviewed before rewards</b>
-        </p>
-        <small>No wallet signature required.</small>
+      
       </section>
 
       <div className={styles.weekReset}>
@@ -172,20 +161,9 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
       ) : null}
 
       <section className={styles.rewardPanel} aria-label="Weekly rewards">
-        <h3>WEEKLY REWARDS</h3>
-        <p>
-          <span>#1</span>
-          <strong>2 Bobros NFT</strong>
-        </p>
-        <p>
-          <span>Top 3</span>
-          <strong>Whitelist spots</strong>
-        </p>
-        <p>
-          <span>Holder</span>
-          <strong>Wallet required</strong>
-        </p>
-        <small>Rewards reset weekly. Entries are reviewed before rewards are distributed. No wallet signature required.</small>
+        <h3></h3>
+        
+        <strong>Rewards reset weekly. Entries are reviewed before rewards are distributed. Weekly Rewards only for Bobro holders.</strong>
       </section>
     </aside>
   );

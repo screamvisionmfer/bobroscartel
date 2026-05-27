@@ -8,6 +8,27 @@ const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
+const canvasDprCapDesktop = 1.5;
+const canvasDprCapMobile = 1.15;
+const canvasFrameMsDesktop = 1000 / 60;
+const canvasFrameMsMobile = 1000 / 45;
+const canvasIdleFrameMsDesktop = 1000 / 30;
+const canvasIdleFrameMsMobile = 1000 / 24;
+
+function getCanvasPerformanceProfile(width: number) {
+  const isCoarsePointer =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(pointer: coarse)").matches
+      : false;
+  const isMobileSized = width <= 760 || isCoarsePointer;
+
+  return {
+    dprCap: isMobileSized ? canvasDprCapMobile : canvasDprCapDesktop,
+    activeFrameMs: isMobileSized ? canvasFrameMsMobile : canvasFrameMsDesktop,
+    idleFrameMs: isMobileSized ? canvasIdleFrameMsMobile : canvasIdleFrameMsDesktop,
+  };
+}
+
 const legacyPlayerAssetPath = "/game/bobro-head.png";
 const headAssetPaths = {
   "bobro-head": "/game/heads/bobro-head.png",
@@ -116,7 +137,7 @@ const backgroundParallax: Record<keyof typeof backgroundAssetPaths, number> = {
   clouds: 0.011,
   "storm-market": 0.01,
   moon: 0.009,
-  "crypto-orbit": 0.008,
+  "crypto-orbit": 0.01,
   ascension: 0.007,
   "billionaire-club": 0.006,
   "bobo-heaven": 0.005,
@@ -440,12 +461,12 @@ function clamp(value: number, min: number, max: number) {
 
 const biomeDefinitions: Array<{ key: BackgroundKey; label: StageLabel; min: number; fallback: string }> = [
   { key: "backalley", label: "BACKALLEY", min: 0, fallback: "#213141" },
-  { key: "rooftops", label: "ROOFTOPS", min: 250_000, fallback: "#415d7a" },
+  { key: "rooftops", label: "ROOFTOPS", min: 350_000, fallback: "#415d7a" },
   { key: "sky-ascent", label: "SKY ASCENT", min: 1_000_000, fallback: "#72b8e6" },
   { key: "clouds", label: "CLOUDS", min: 5_000_000, fallback: "#9ed4ef" },
   { key: "storm-market", label: "STORM MARKET", min: 25_000_000, fallback: "#576270" },
   { key: "moon", label: "MOON", min: 100_000_000, fallback: "#29303e" },
-  { key: "crypto-orbit", label: "CRYPTO ORBIT", min: 500_000_000, fallback: "#151b35" },
+  { key: "crypto-orbit", label: "JUNGLE BAY ABYSS", min: 500_000_000, fallback: "#151b35" },
   { key: "ascension", label: "ASCENSION", min: 2_000_000_000, fallback: "#d6c076" },
   { key: "billionaire-club", label: "BILLIONAIRE CLUB", min: 10_000_000_000, fallback: "#6f4f2f" },
   { key: "bobo-heaven", label: "BOBO HEAVEN", min: 69_000_000_000, fallback: "#eac85e" },
@@ -2368,11 +2389,60 @@ function updateWorld(
       }
 
       if (platform.kind === "solana") {
-        nextJumpVelocity = Math.max(nextJumpVelocity, jumpVelocity * 1.1 + difficulty * 12);
-        world.shakePower = Math.max(world.shakePower, 3);
-        reactToLanding(world, platform, "#8f6ed5", 0.075, 7);
-        triggerNotice(world, "SOL BOOST", 1.2);
-        pushFloatingText(world, "SOL BOOST", platform.x + platform.width / 2, platform.y + 28, "#8f6ed5");
+        const roll = Math.random();
+
+        let pumpLabel = "PUMP!";
+        let pumpColor = "#39d98a";
+        let pumpMultiplier = 1.12;
+        let pumpShake = 4;
+        let pumpFlash = 0.08;
+        let breaksAfterPump = false;
+
+        if (roll < 0.05) {
+          pumpLabel = "GOD CANDLE";
+          pumpMultiplier = 5.55;
+          pumpShake = 52;
+          pumpFlash = 0.5;
+        } else if (roll < 0.34) {
+          pumpLabel = "PUMP PUMP PUMP";
+          pumpMultiplier = 1.32;
+          pumpShake = 8;
+          pumpFlash = 0.15;
+        } else if (roll < 0.52) {
+          pumpLabel = "DEV SOLD";
+          pumpMultiplier = 0.42;
+          pumpColor = "#b94b3e";
+          pumpShake = 7;
+          pumpFlash = 0.12;
+        } else if (roll < 0.60) {
+          pumpLabel = "OH SHIT";
+          pumpMultiplier = 0.46;
+          pumpColor = "#e4b745";
+          pumpShake = 9;
+          pumpFlash = 0.14;
+        } else if (roll < 0.85) {
+          pumpLabel = "RUGGED AFTER PUMP";
+          pumpMultiplier = 0.05;
+          pumpColor = "#d4aa4c";
+          pumpShake = 10;
+          pumpFlash = 0.16;
+          breaksAfterPump = true;
+        }
+
+        const pumpVelocity = Math.max(jumpVelocity * 0.86, jumpVelocity * pumpMultiplier + difficulty * 18);
+        nextJumpVelocity = Math.max(nextJumpVelocity, pumpVelocity);
+
+        if (breaksAfterPump) {
+          platform.state = "breaking";
+          platform.breakStartedAt = world.time;
+          ensureReachablePathPlatform(world);
+        }
+
+        world.shakePower = Math.max(world.shakePower, pumpShake);
+        world.flashPower = Math.max(world.flashPower, pumpFlash);
+        reactToLanding(world, platform, pumpColor, 0.085, pumpShake);
+        triggerNotice(world, pumpLabel, 1.15);
+        pushFloatingText(world, pumpLabel, platform.x + platform.width / 2, platform.y + 28, pumpColor);
         playAudioCue?.("solanaPlatform");
       }
 
@@ -2639,7 +2709,10 @@ function drawPosterBackgroundImage(
   const localProgress = getBiomeLocalProgress(getBiomeProgress(world), background);
   const parallax = backgroundParallax[background];
   const drift = clamp(localProgress * extraHeight * 0.78 + world.cameraY * parallax, 0, extraHeight * 0.82);
-  const y = clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
+  const anchorToBottom = background === "crypto-orbit";
+  const y = anchorToBottom
+    ? clamp(-extraHeight + drift * 0.35, -extraHeight, 0)
+    : clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
 
   context.drawImage(image, x, y, drawWidth, drawHeight);
 
@@ -3786,35 +3859,11 @@ type HolderResponse = {
 
 type WalletStatus = "idle" | "connecting" | "checking" | "holder" | "denied" | "error";
 
-type SolanaWalletProvider = {
-  publicKey?: { toString: () => string };
-  connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
-};
-
-function getBrowserSolanaProvider() {
-  if (typeof window === "undefined") return undefined;
-
-  return (window as Window & { solana?: SolanaWalletProvider }).solana;
-}
-
 function getGameShareUrl() {
   if (configuredSiteUrl) return `${configuredSiteUrl}/game`;
   if (typeof window !== "undefined") return `${window.location.origin}/game`;
 
   return fallbackGameShareUrl;
-}
-
-async function connectWallet() {
-  const provider = getBrowserSolanaProvider();
-
-  if (provider?.connect) {
-    const result = await provider.connect();
-    const wallet = result.publicKey?.toString() ?? provider.publicKey?.toString();
-
-    if (wallet) return wallet;
-  }
-
-  return playerWallet;
 }
 
 async function checkHolder(wallet: string) {
@@ -4100,36 +4149,6 @@ export default function BobroToTheMoon({
     loadProgressForMode("guest");
     onAccessChange?.({ mode: "guest" });
   }, [loadProgressForMode, onAccessChange]);
-
-  const connectHolderWallet = useCallback(async () => {
-    if (walletStatus === "connecting" || walletStatus === "checking") return;
-
-    autoStartGuestRunRef.current = false;
-    setWalletStatus("connecting");
-    setAccessMessage("");
-
-    try {
-      const wallet = await connectWallet();
-      setWalletAddress(wallet);
-      setManualWalletAddress(wallet);
-      setWalletStatus("checking");
-
-      const holder = await checkHolder(wallet);
-
-      if (holder.isHolder) {
-        activateHolderAccess(wallet, holder.bobrosCount);
-        return;
-      }
-
-      activateGuestAccess("NO BOBRO NFT DETECTED. You can still play as guest.");
-    } catch {
-      setMode("guest");
-      setModeChosen(false);
-      setWalletStatus("error");
-      setAccessMessage("Wallet check unavailable. You can still play as guest.");
-      onAccessChange?.({ mode: "guest" });
-    }
-  }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
 
   const startGuestRunFromMenu = useCallback(() => {
     startMusic("normal");
@@ -4545,14 +4564,26 @@ ${shareUrl}`;
     const context = canvas.getContext("2d");
     if (!context) return undefined;
 
+    let activeFrameMs = canvasFrameMsDesktop;
+    let idleFrameMs = canvasIdleFrameMsDesktop;
+
     const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
       const nextWidth = Math.max(300, Math.floor(rect.width || defaultWidth));
       const nextHeight = Math.max(460, Math.floor(rect.height || defaultHeight));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const performanceProfile = getCanvasPerformanceProfile(nextWidth);
+      const dpr = Math.min(window.devicePixelRatio || 1, performanceProfile.dprCap);
+      activeFrameMs = performanceProfile.activeFrameMs;
+      idleFrameMs = performanceProfile.idleFrameMs;
 
-      canvas.width = Math.floor(nextWidth * dpr);
-      canvas.height = Math.floor(nextHeight * dpr);
+      const nextCanvasWidth = Math.floor(nextWidth * dpr);
+      const nextCanvasHeight = Math.floor(nextHeight * dpr);
+
+      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
+        canvas.width = nextCanvasWidth;
+        canvas.height = nextCanvasHeight;
+      }
+
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       resizeWorld(worldRef.current, nextWidth, nextHeight);
       drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
@@ -4565,12 +4596,21 @@ ${shareUrl}`;
     resizeObserver?.observe(canvas);
 
     const tick = (time: number) => {
+      const world = worldRef.current;
+      const isActiveRun = world.status === "playing" || world.status === "countdown";
+      const targetFrameMs = isActiveRun ? activeFrameMs : idleFrameMs;
+
+      if (lastFrameTimeRef.current !== null && time - lastFrameTimeRef.current < targetFrameMs) {
+        animationFrameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
       const previousTime = lastFrameTimeRef.current ?? time;
       const deltaSeconds = Math.min(0.034, Math.max(0, (time - previousTime) / 1000));
       lastFrameTimeRef.current = time;
 
-      updateWorld(worldRef.current, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
-      drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
+      updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
+      drawWorld(context, world, assetsRef.current, selectedHead);
       syncHud();
 
       animationFrameRef.current = window.requestAnimationFrame(tick);
@@ -4785,29 +4825,22 @@ ${shareUrl}`;
                     <div className={styles.prizeStrip} aria-label="Weekly contest rewards">
                       <b>#1 WINS BOBROS NFT</b>
                       <b>TOP 3 GET WHITELIST</b>
-                      <b>MANUAL REVIEW</b>
+                      <b>HOLDER REWARDS</b>
                     </div>
                   </div>
 
-                  <button className={`${styles.startButton} ${styles.primaryRunButton}`} type="button" onClick={startGuestRunFromMenu}>
-                    START GUEST RUN
+                  <button
+                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
+                    type="button"
+                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
+                    disabled={modeChosen && !assetsLoaded}
+                  >
+                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
                   </button>
 
-                  <div className={styles.holderTerminal} aria-label="Holder access terminal">
-                    <div className={styles.terminalHeader}>
-                      <strong>HOLDER ACCESS</strong>
-                      <span>CONNECT OR PASTE WALLET</span>
-                    </div>
-                    <button
-                      className={styles.startButton}
-                      type="button"
-                      onClick={connectHolderWallet}
-                      disabled={walletStatus === "connecting" || walletStatus === "checking"}
-                    >
-                      {walletStatus === "connecting" ? "CONNECTING..." : walletStatus === "checking" ? "CHECKING..." : "HOLDER LOGIN"}
-                    </button>
+                  <div className={styles.holderTerminal} aria-label="Holder wallet check">
                     <label className={styles.walletEntry}>
-                      <span>PASTE HOLDER WALLET</span>
+                      <span>WANT WEEKLY REWARDS? PASTE HOLDER WALLET</span>
                       <div>
                         <input
                           type="text"
@@ -4835,38 +4868,18 @@ ${shareUrl}`;
                       </div>
                     </label>
                     <div className={styles.safetyLine}>
-                      <span>NO SIGNATURE · NO TRANSACTION</span>
-                      <span>ADDRESS CHECK ONLY</span>
+                      <span>No wallet connection required.</span>
                     </div>
                     {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
                     {accessMessage ? (
                       <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                     ) : null}
                   </div>
-
-                  {modeChosen ? (
-                    <button
-                      className={`${styles.startButton} ${styles.bountyRunButton}`}
-                      type="button"
-                      onClick={startGame}
-                      disabled={!assetsLoaded}
-                    >
-                      {!assetsLoaded ? "LOADING ASSETS" : readyStartLabel}
-                    </button>
-                  ) : null}
                 </div>
 
                 <div className={styles.menuSkinPanel}>
                   <div className={styles.skinSelector} aria-label="Choose your Bobro">
                     <strong className={styles.skinTitle}>SELECT BOBRO</strong>
-                    <div className={styles.skinSelectedPreview}>
-                      <img src={selectedHeadOption.src} alt="" aria-hidden="true" />
-                      <div>
-                        <span>SELECTED</span>
-                        <strong>{selectedHeadOption.label}</strong>
-                        <small>{mode === "holder" ? `BEST ${formatMcap(bestUnlockScore)}` : "GUEST DEFAULT ONLY"}</small>
-                      </div>
-                    </div>
                     <div className={styles.skinGrid}>
                       {headOptions.map((head) => {
                         const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";

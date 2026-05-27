@@ -599,7 +599,7 @@
   text-transform: uppercase;
 }
 
-.holderTerminal > .startButton {
+.holderTerminal>.startButton {
   width: 100%;
   min-width: 0;
   min-height: 2.18rem;
@@ -1487,7 +1487,7 @@
     font-size: 0.62rem;
   }
 
-  .holderTerminal > .startButton {
+  .holderTerminal>.startButton {
     min-height: 1.96rem;
     padding: 0.32rem 0.48rem;
     font-size: 0.52rem;
@@ -1604,7 +1604,7 @@
     font-size: 0.46rem;
   }
 
-  .gameOverlay > .startButton {
+  .gameOverlay>.startButton {
     position: sticky;
     bottom: 0;
     z-index: 5;
@@ -1740,7 +1740,9 @@
 }
 
 @keyframes gameCloudFloat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate3d(0, 0, 0);
   }
 
@@ -1762,7 +1764,9 @@
 }
 
 @keyframes hudTinyWobble {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
 
@@ -1772,5 +1776,294 @@
 
   70% {
     transform: translate3d(1px, 0, 0) rotate(0.35deg);
+  }
+}
+
+/* Compact arcade start menu override */
+.readyMenu {
+  width: min(100%, 46rem);
+  grid-template-columns: minmax(0, 1.05fr) minmax(13rem, 0.8fr);
+  gap: 0.46rem;
+  align-items: start;
+}
+
+.menuAccessPanel,
+.menuSkinPanel {
+  gap: 0.34rem;
+  padding: 0.42rem;
+  border-width: 2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 246, 210, 0.14)),
+    rgba(255, 255, 255, 0.28);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.12);
+}
+
+.menuAccessPanel {
+  align-content: start;
+}
+
+.menuIntro {
+  gap: 0.24rem;
+}
+
+.menuIntro span {
+  justify-self: start;
+  padding: 0.18rem 0.44rem;
+  border: 2px solid rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
+  background: rgba(110, 173, 71, 0.34);
+  color: #090909;
+  font-size: 0.54rem;
+  line-height: 1;
+}
+
+.prizeStrip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.18rem;
+}
+
+.prizeStrip b {
+  padding: 0.22rem 0.22rem;
+  border-width: 2px;
+  background: rgba(242, 199, 58, 0.5);
+  font-size: 0.48rem;
+  line-height: 1;
+}
+
+.primaryRunButton,
+.bountyRunButton {
+  min-height: 3.15rem;
+  padding: 0.72rem 0.92rem;
+  font-size: clamp(0.88rem, 2vw, 1.08rem);
+  letter-spacing: 0.03em;
+  transform: rotate(-0.5deg);
+}
+
+.primaryRunButton {
+  background: #86c45e;
+  box-shadow: 0 9px 0 rgba(51, 77, 36, 0.32);
+}
+
+.bountyRunButton {
+  background: #f2c73a;
+  box-shadow: 0 9px 0 rgba(91, 72, 31, 0.36);
+}
+
+.holderTerminal {
+  gap: 0.24rem;
+  padding: 0.28rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.terminalHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.28rem;
+  align-items: center;
+}
+
+.terminalHeader strong {
+  color: #090909;
+  font-size: 0.62rem;
+}
+
+.terminalHeader span {
+  color: rgba(33, 22, 15, 0.56);
+  font-size: 0.48rem;
+  text-align: right;
+}
+
+.walletEntry {
+  gap: 0.16rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.walletEntry span {
+  display: none;
+}
+
+.walletEntry div {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.22rem;
+}
+
+.walletEntry input {
+  height: 2rem;
+  padding: 0.32rem 0.54rem;
+  font-size: 0.56rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.walletEntry .startButton {
+  min-width: 4.4rem;
+  min-height: 2rem;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.54rem;
+}
+
+.statusPill {
+  justify-self: stretch;
+  padding: 0.24rem 0.44rem;
+  border-color: rgba(0, 0, 0, 0.62);
+  background: rgba(110, 173, 71, 0.76);
+  font-size: 0.52rem;
+  text-align: center;
+}
+
+.guestNote,
+.holderTerminal .guestNote {
+  justify-self: start;
+  color: rgba(33, 22, 15, 0.58);
+  font-size: 0.5rem;
+  line-height: 1;
+}
+
+.menuSkinPanel .skinSelector {
+  gap: 0.34rem;
+}
+
+.skinTitle {
+  justify-self: start;
+  padding: 0.18rem 0.46rem;
+  border: 2px solid rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
+  background: rgba(242, 199, 58, 0.42);
+  color: #090909;
+  font-size: 0.62rem;
+}
+
+.skinGrid {
+  grid-template-columns: repeat(4, minmax(3.9rem, 1fr));
+  gap: 0.28rem;
+}
+
+.skinButton {
+  min-height: 5.1rem;
+  padding: 0.32rem 0.22rem;
+  border-width: 2px;
+}
+
+.skinPreview {
+  width: clamp(2.15rem, 5vw, 2.75rem);
+}
+
+.skinButtonSelected .skinPreview {
+  width: clamp(2.5rem, 5.8vw, 3.15rem);
+}
+
+.skinButton span {
+  font-size: 0.56rem;
+}
+
+.skinUnlock {
+  font-size: 0.44rem;
+}
+
+@media (max-width: 760px) {
+  .readyMenu {
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
+  }
+
+  .menuAccessPanel,
+  .menuSkinPanel {
+    gap: 0.24rem;
+    padding: 0.28rem;
+  }
+
+  .primaryRunButton,
+  .bountyRunButton {
+    min-height: 2.65rem;
+    font-size: 0.78rem;
+  }
+
+  .terminalHeader {
+    grid-template-columns: 1fr;
+    gap: 0.08rem;
+  }
+
+  .terminalHeader span {
+    text-align: left;
+  }
+
+  .walletEntry div {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .walletEntry input,
+  .walletEntry .startButton {
+    height: 1.86rem;
+    min-height: 1.86rem;
+    font-size: 0.5rem;
+  }
+
+  .skinGrid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(4.1rem, 4.8rem);
+    grid-template-columns: none;
+    gap: 0.24rem;
+    overflow-x: auto;
+    padding-bottom: 0.12rem;
+  }
+
+  .skinButton {
+    min-height: 4.45rem;
+  }
+
+  .skinPreview {
+    width: 2.05rem;
+  }
+
+  .skinButtonSelected .skinPreview {
+    width: 2.35rem;
+  }
+}
+
+
+/* Mobile performance trim: keep style, reduce paint/animation cost on hot devices. */
+@media (max-width: 760px),
+(pointer: coarse) {
+  .gameCloud {
+    animation: none;
+    filter: none;
+    opacity: 0.42;
+  }
+
+  .gameHeaderStrip,
+  .gateCard,
+  .leaderboard,
+  .gameCabinet,
+  .menuAccessPanel,
+  .menuSkinPanel,
+  .skinButton,
+  .primaryButton,
+  .startButton,
+  .pauseButton,
+  .soundToggle,
+  .statusBadges span,
+  .playerBest,
+  .rewardPanel,
+  .contestPanel,
+  .weekReset {
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  .canvasWrap {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 4px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .canvasWrap::after {
+    background: radial-gradient(circle at 50% 50%, transparent 0 70%, rgba(33, 22, 15, 0.14) 100%);
+  }
+
+  .gameHudBoosted .hudCell:nth-child(4),
+  .gameHudMilestone .hudCell:first-child,
+  .gameHudIntoxicated,
+  .unlockToast {
+    animation-duration: 1200ms;
   }
 }
