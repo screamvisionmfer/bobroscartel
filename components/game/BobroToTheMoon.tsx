@@ -99,7 +99,7 @@ const stageLabels = [
   "CLOUDS",
   "STORM MARKET",
   "MOON",
-  "CRYPTO ORBIT",
+  "JUNGLE BAY ABYSS",
   "ASCENSION",
   "BILLIONAIRE CLUB",
   "BOBO HEAVEN",
