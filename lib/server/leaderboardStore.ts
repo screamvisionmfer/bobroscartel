@@ -130,12 +130,27 @@ if (!globalWithLeaderboard.bobrosLeaderboard) {
   globalWithLeaderboard.bobrosLeaderboard = mockEntries;
 }
 
-function sanitizeDisplayName(value: unknown) {
-  if (typeof value !== "string") return "ANON BOBRO";
-  if (/https?:\/\/|www\.|[a-z0-9-]+\.(?:com|net|org|io|gg|xyz|lol|app)\b/i.test(value)) return "ANON BOBRO";
+function sanitizeDisplayName(value: unknown): string {
+  if (typeof value !== "string") return "ANON";
 
-  const normalized = value.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 16).trim().replace(/\s+/g, " ");
-  return normalized || "ANON BOBRO";
+  const cleaned = value
+    .trim()
+    .replace(/[^a-zA-Z0-9 _.-]/g, "")
+    .slice(0, 18);
+
+  return cleaned || "ANON";
+}
+
+function sanitizeXHandle(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const cleaned = value
+    .trim()
+    .replace(/^@+/, "")
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .slice(0, 15);
+
+  return cleaned.length > 0 ? cleaned : undefined;
 }
 
 function toPublicEntry(entry: StoredLeaderboardEntry, index: number): LeaderboardEntry {
