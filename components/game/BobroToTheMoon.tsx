@@ -8,12 +8,12 @@ const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
-const canvasDprCapDesktop = 1.5;
-const canvasDprCapMobile = 1.15;
-const canvasFrameMsDesktop = 1000 / 60;
-const canvasFrameMsMobile = 1000 / 45;
-const canvasIdleFrameMsDesktop = 1000 / 30;
-const canvasIdleFrameMsMobile = 1000 / 24;
+const canvasDprCapDesktop = 1.25;
+const canvasDprCapMobile = 1.05;
+const canvasFrameMsDesktop = 1000 / 55;
+const canvasFrameMsMobile = 1000 / 40;
+const canvasIdleFrameMsDesktop = 1000 / 12;
+const canvasIdleFrameMsMobile = 1000 / 6;
 
 function getCanvasPerformanceProfile(width: number) {
   const isCoarsePointer =
@@ -616,6 +616,11 @@ function pushFloatingText(world: World, text: string, x: number, y: number, colo
     createdAt: world.time,
   });
   world.nextFeedbackId += 1;
+
+  const feedbackLimit = isMobileWorld(world) ? 6 : 12;
+  if (world.feedbackTexts.length > feedbackLimit) {
+    world.feedbackTexts.splice(0, world.feedbackTexts.length - feedbackLimit);
+  }
 }
 
 function getDifficulty(altitude: number) {
@@ -1224,7 +1229,7 @@ function maxMumuCount(score: number) {
 function redMumuChance(world: World) {
   const tier = getBiomeTier(world);
 
-  if (tier < 6) return 0;
+  if (tier < 6) return 0.04;
   if (tier === 6) return 0.14;
   if (tier === 7) return 0.24;
   if (tier === 8) return 0.34;
@@ -1633,8 +1638,9 @@ function addPaperParticles(world: World, x: number, y: number, color: string, co
     world.nextParticleId += 1;
   }
 
-  if (world.particles.length > particleLimit) {
-    world.particles.splice(0, world.particles.length - particleLimit);
+  const maxParticles = isMobileWorld(world) ? 22 : particleLimit;
+  if (world.particles.length > maxParticles) {
+    world.particles.splice(0, world.particles.length - maxParticles);
   }
 }
 
@@ -1655,16 +1661,23 @@ function reactToLanding(world: World, platform: Platform, color: string, power: 
 }
 
 function updateParticles(world: World, deltaSeconds: number) {
-  world.particles = world.particles.filter((particle) => {
+  let writeIndex = 0;
+
+  for (let index = 0; index < world.particles.length; index += 1) {
+    const particle = world.particles[index];
     const age = world.time - particle.createdAt;
-    if (age > particle.lifetime) return false;
+    if (age > particle.lifetime) continue;
 
     particle.x += particle.vx * deltaSeconds;
     particle.y += particle.vy * deltaSeconds;
     particle.vy -= 220 * deltaSeconds;
     particle.vx *= Math.max(0, 1 - deltaSeconds * 2.8);
-    return true;
-  });
+
+    world.particles[writeIndex] = particle;
+    writeIndex += 1;
+  }
+
+  world.particles.length = writeIndex;
 }
 
 function endRun(world: World, recordRun: (world: World) => void, playAudioCue?: (cue: GameAudioCue) => void) {
@@ -2247,7 +2260,15 @@ function updateWorld(
   if (Math.abs(world.cameraKick) < 0.05) {
     world.cameraKick = 0;
   }
-  world.feedbackTexts = world.feedbackTexts.filter((feedback) => world.time - feedback.createdAt < feedbackLifetime);
+  let feedbackWriteIndex = 0;
+  for (let index = 0; index < world.feedbackTexts.length; index += 1) {
+    const feedback = world.feedbackTexts[index];
+    if (world.time - feedback.createdAt >= feedbackLifetime) continue;
+    world.feedbackTexts[feedbackWriteIndex] = feedback;
+    feedbackWriteIndex += 1;
+  }
+  world.feedbackTexts.length = feedbackWriteIndex;
+
   updateParticles(world, deltaSeconds);
 
   if (world.noticeUntil < world.time) {
@@ -2711,7 +2732,7 @@ function drawPosterBackgroundImage(
   const drift = clamp(localProgress * extraHeight * 0.78 + world.cameraY * parallax, 0, extraHeight * 0.82);
   const anchorToBottom = background === "crypto-orbit";
   const y = anchorToBottom
-    ? clamp(-extraHeight + drift * 0.35, -extraHeight, 0)
+    ? clamp(-extraHeight + drift * 0.95, -extraHeight, 0)
     : clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
 
   context.drawImage(image, x, y, drawWidth, drawHeight);
@@ -3297,9 +3318,7 @@ function drawSingleMumu(context: CanvasRenderingContext2D, world: World, image: 
     context.fillRect(-mumu.width / 2, -mumu.height / 2, mumu.width, mumu.height);
     context.globalCompositeOperation = "source-over";
     context.globalAlpha = 0.85;
-    context.strokeStyle = "#f05b51";
     context.lineWidth = 3;
-    context.strokeRect(-mumu.width / 2 + 8, -mumu.height / 2 + 8, mumu.width - 16, mumu.height - 16);
   }
 
   context.restore();
@@ -3537,6 +3556,7 @@ function drawGameParticles(context: CanvasRenderingContext2D, world: World) {
 }
 
 function drawWorld(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, selectedHead: HeadKey) {
+  const lowFx = world.width <= 760;
   context.clearRect(0, 0, world.width, world.height);
 
   context.save();
@@ -3555,29 +3575,37 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
   }
 
   drawBackground(context, world, assets);
-  drawMarketCrashCanvasEffects(context, world);
+  if (!lowFx) {
+    drawMarketCrashCanvasEffects(context, world);
+  }
 
-  const sortedPlatforms = [...world.platforms].sort((left, right) => left.y - right.y);
-  for (const platform of sortedPlatforms) {
+  const visibleMinY = world.cameraY - world.height - 260;
+  const visibleMaxY = world.cameraY + world.height + 260;
+  for (const platform of world.platforms) {
+    if (platform.y < visibleMinY || platform.y > visibleMaxY) continue;
     drawPlatform(context, world, platform, assets);
   }
 
   drawCollectibles(context, world, assets);
   drawHoneyLife(context, world, assets.honeyLife ?? assets.platforms["honey-jar"]);
   drawMumu(context, world, assets.mumu, assets.evilMumu);
-  drawOnFireCanvasEffects(context, world);
+  if (!lowFx) {
+    drawOnFireCanvasEffects(context, world);
+  }
   drawGameParticles(context, world);
   drawPlayer(context, world, resolvePlayerImage(assets, selectedHead));
   drawFloatingFeedback(context, world);
   context.restore();
 
-  context.save();
-  context.globalAlpha = 0.08;
-  context.fillStyle = "#000000";
-  for (let y = 0; y < world.height; y += 5) {
-    context.fillRect(0, y, world.width, 1);
+  if (!lowFx) {
+    context.save();
+    context.globalAlpha = 0.08;
+    context.fillStyle = "#000000";
+    for (let y = 0; y < world.height; y += 5) {
+      context.fillRect(0, y, world.width, 1);
+    }
+    context.restore();
   }
-  context.restore();
 
   if (world.flashPower > 0.01) {
     context.save();
@@ -3615,7 +3643,7 @@ function scoreCardTheme(stage: StageLabel) {
     case "MOON":
       return { top: "#172b55", middle: "#8ea9d8", bottom: "#f2e6bf", accent: "#f2c73a", shadow: "#10172e", badge: "MOON SURVIVOR" };
     case "JUNGLE BAY ABYSS":
-      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "ORBIT LEGEND" };
+      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "JUNGLE BAY LEGEND" };
     case "ASCENSION":
       return { top: "#f2c73a", middle: "#fff0b8", bottom: "#d58e4d", accent: "#6ead47", shadow: "#9b6b18", badge: "ASCENSION RUN" };
     case "BILLIONAIRE CLUB":
@@ -4829,14 +4857,7 @@ ${shareUrl}`;
                     </div>
                   </div>
 
-                  <button
-                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
-                    type="button"
-                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
-                    disabled={modeChosen && !assetsLoaded}
-                  >
-                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
-                  </button>
+                 
 
                   <div className={styles.holderTerminal} aria-label="Holder wallet check">
                     <label className={styles.walletEntry}>
@@ -4867,14 +4888,20 @@ ${shareUrl}`;
                         </button>
                       </div>
                     </label>
-                    <div className={styles.safetyLine}>
-                      <span>Paste address only. No wallet connection.</span>
-                    </div>
+                    
                     {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
                     {accessMessage ? (
                       <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                     ) : null}
                   </div>
+                  <button
+                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
+                    type="button"
+                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
+                    disabled={modeChosen && !assetsLoaded}
+                  >
+                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
+                  </button>
                 </div>
 
                 <div className={styles.menuSkinPanel}>

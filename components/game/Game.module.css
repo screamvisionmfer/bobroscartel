@@ -1940,3 +1940,37 @@
     display: none;
   }
 }
+
+/* Low FX performance patch */
+@media (max-width: 760px),
+(pointer: coarse) {
+
+  .gameCabinet,
+  .canvasWrap,
+  .gameHud,
+  .hudCell,
+  .gameOverlay,
+  .leaderboard,
+  .gateCard,
+  .menuAccessPanel,
+  .menuSkinPanel,
+  .resultPanel {
+    box-shadow: none !important;
+  }
+
+  .canvasWrap::after {
+    display: none !important;
+  }
+
+  .gameCloud {
+    animation: none !important;
+    filter: none !important;
+  }
+
+  .gameHudBoosted .hudCell:nth-child(4),
+  .gameHudMilestone .hudCell:first-child,
+  .gameHudIntoxicated,
+  .unlockToast {
+    animation: none !important;
+  }
+}
