@@ -8,6 +8,9 @@ import styles from "./Game.module.css";
 export default function GameShell() {
   const [leaderboardVersion, setLeaderboardVersion] = useState(0);
   const [holderWallet, setHolderWallet] = useState("");
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+
+  const leaderboard = <Leaderboard refreshKey={leaderboardVersion} walletAddress={holderWallet} />;
 
   return (
     <main className={`page-shell ${styles.gamePage}`}>
@@ -36,8 +39,36 @@ export default function GameShell() {
           onScoreSubmitted={() => setLeaderboardVersion((current) => current + 1)}
           onAccessChange={(access) => setHolderWallet(access.mode === "holder" ? access.wallet ?? "" : "")}
         />
-        <Leaderboard refreshKey={leaderboardVersion} walletAddress={holderWallet} />
+
+        <div className={styles.leaderboardSidebar}>{leaderboard}</div>
       </section>
+
+      <button
+        className={styles.leaderboardMobileOpen}
+        type="button"
+        onClick={() => setLeaderboardOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={leaderboardOpen}
+      >
+        BOUNTY BOARD
+      </button>
+
+      {leaderboardOpen ? (
+        <div className={styles.leaderboardModal} role="dialog" aria-modal="true" aria-label="Weekly bounty board">
+          <div className={styles.leaderboardModalBackdrop} onClick={() => setLeaderboardOpen(false)} aria-hidden="true" />
+          <section className={styles.leaderboardModalPanel}>
+            <div className={styles.leaderboardModalTop}>
+              <strong>BOUNTY BOARD</strong>
+              <button type="button" onClick={() => setLeaderboardOpen(false)}>
+                × BACK TO GAME
+              </button>
+            </div>
+            <div className={styles.leaderboardModalScroll}>
+              <Leaderboard refreshKey={leaderboardVersion} walletAddress={holderWallet} />
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

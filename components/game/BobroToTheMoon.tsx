@@ -8,6 +8,27 @@ const playerWallet = "DEMO_BOBRO...PLAY";
 const defaultPlayerName = "ANON BOBRO";
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
+const canvasDprCapDesktop = 1.5;
+const canvasDprCapMobile = 1.15;
+const canvasFrameMsDesktop = 1000 / 60;
+const canvasFrameMsMobile = 1000 / 45;
+const canvasIdleFrameMsDesktop = 1000 / 30;
+const canvasIdleFrameMsMobile = 1000 / 24;
+
+function getCanvasPerformanceProfile(width: number) {
+  const isCoarsePointer =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(pointer: coarse)").matches
+      : false;
+  const isMobileSized = width <= 760 || isCoarsePointer;
+
+  return {
+    dprCap: isMobileSized ? canvasDprCapMobile : canvasDprCapDesktop,
+    activeFrameMs: isMobileSized ? canvasFrameMsMobile : canvasFrameMsDesktop,
+    idleFrameMs: isMobileSized ? canvasIdleFrameMsMobile : canvasIdleFrameMsDesktop,
+  };
+}
+
 const legacyPlayerAssetPath = "/game/bobro-head.png";
 const headAssetPaths = {
   "bobro-head": "/game/heads/bobro-head.png",
@@ -116,7 +137,7 @@ const backgroundParallax: Record<keyof typeof backgroundAssetPaths, number> = {
   clouds: 0.011,
   "storm-market": 0.01,
   moon: 0.009,
-  "crypto-orbit": 0.008,
+  "crypto-orbit": 0.01,
   ascension: 0.007,
   "billionaire-club": 0.006,
   "bobo-heaven": 0.005,
@@ -440,7 +461,7 @@ function clamp(value: number, min: number, max: number) {
 
 const biomeDefinitions: Array<{ key: BackgroundKey; label: StageLabel; min: number; fallback: string }> = [
   { key: "backalley", label: "BACKALLEY", min: 0, fallback: "#213141" },
-  { key: "rooftops", label: "ROOFTOPS", min: 250_000, fallback: "#415d7a" },
+  { key: "rooftops", label: "ROOFTOPS", min: 350_000, fallback: "#415d7a" },
   { key: "sky-ascent", label: "SKY ASCENT", min: 1_000_000, fallback: "#72b8e6" },
   { key: "clouds", label: "CLOUDS", min: 5_000_000, fallback: "#9ed4ef" },
   { key: "storm-market", label: "STORM MARKET", min: 25_000_000, fallback: "#576270" },
@@ -488,15 +509,6 @@ function getValidPlayerName(value: string) {
 
   const trimmed = normalizePlayerName(value).trim().replace(/\s+/g, " ");
   return trimmed || defaultPlayerName;
-}
-
-function normalizeXHandle(value: string) {
-  return value.replace(/^@+/, "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 15);
-}
-
-function getValidXHandle(value: string) {
-  const normalized = normalizeXHandle(value.trim());
-  return normalized || undefined;
 }
 
 function getDisplayMcap(world: World) {
@@ -2697,7 +2709,10 @@ function drawPosterBackgroundImage(
   const localProgress = getBiomeLocalProgress(getBiomeProgress(world), background);
   const parallax = backgroundParallax[background];
   const drift = clamp(localProgress * extraHeight * 0.78 + world.cameraY * parallax, 0, extraHeight * 0.82);
-  const y = clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
+  const anchorToBottom = background === "crypto-orbit";
+  const y = anchorToBottom
+    ? clamp(-extraHeight + drift * 0.35, -extraHeight, 0)
+    : clamp(-extraHeight * 0.82 + drift, -extraHeight, 0);
 
   context.drawImage(image, x, y, drawWidth, drawHeight);
 
@@ -2998,9 +3013,9 @@ function drawPlatform(context: CanvasRenderingContext2D, world: World, platform:
       "green-candle": { widthPad: 16, height: 38, yOffset: 14 },
       "red-candle": { widthPad: 16, height: 38, yOffset: 14 },
       rug: { widthPad: 18, height: 42, yOffset: 16 },
-      "honey-jar": { widthPad: 20, height: 38, yOffset: 17 },
+      "honey-jar": { widthPad: 16, height: 32, yOffset: 17 },
       "cash-stack": { widthPad: 16, height: 48, yOffset: 22 },
-      solana: { widthPad: 18, height: 40, yOffset: 15 },
+      solana: { widthPad: 16, height: 40, yOffset: 15 },
     };
     const box = spriteScale[platform.kind];
     const drawWidth = platform.width + box.widthPad;
@@ -3599,8 +3614,8 @@ function scoreCardTheme(stage: StageLabel) {
       return { top: "#a54848", middle: "#e19879", bottom: "#391d28", accent: "#f2c73a", shadow: "#6f252f", badge: "PANIC SURVIVOR" };
     case "MOON":
       return { top: "#172b55", middle: "#8ea9d8", bottom: "#f2e6bf", accent: "#f2c73a", shadow: "#10172e", badge: "MOON SURVIVOR" };
-    case "JUNGLE BAY ABYSS":
-      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "ABYSS RAIDER" };
+    case "CRYPTO ORBIT":
+      return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "ORBIT LEGEND" };
     case "ASCENSION":
       return { top: "#f2c73a", middle: "#fff0b8", bottom: "#d58e4d", accent: "#6ead47", shadow: "#9b6b18", badge: "ASCENSION RUN" };
     case "BILLIONAIRE CLUB":
@@ -3842,37 +3857,13 @@ type HolderResponse = {
   bobrosCount: number;
 };
 
-type WalletStatus = "idle" | "connecting" | "checking" | "holder" | "denied" | "error";
-
-type SolanaWalletProvider = {
-  publicKey?: { toString: () => string };
-  connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
-};
-
-function getBrowserSolanaProvider() {
-  if (typeof window === "undefined") return undefined;
-
-  return (window as Window & { solana?: SolanaWalletProvider }).solana;
-}
+type WalletStatus = "idle" | "checking" | "holder" | "denied" | "error";
 
 function getGameShareUrl() {
   if (configuredSiteUrl) return `${configuredSiteUrl}/game`;
   if (typeof window !== "undefined") return `${window.location.origin}/game`;
 
   return fallbackGameShareUrl;
-}
-
-async function connectWallet() {
-  const provider = getBrowserSolanaProvider();
-
-  if (provider?.connect) {
-    const result = await provider.connect();
-    const wallet = result.publicKey?.toString() ?? provider.publicKey?.toString();
-
-    if (wallet) return wallet;
-  }
-
-  return playerWallet;
 }
 
 async function checkHolder(wallet: string) {
@@ -3946,7 +3937,6 @@ export default function BobroToTheMoon({
   const [selectedHead, setSelectedHead] = useState<HeadKey>("bobro-head");
   const [bestUnlockScore, setBestUnlockScore] = useState(0);
   const [playerName, setPlayerName] = useState(defaultPlayerName);
-  const [xHandle, setXHandle] = useState("");
   const [nameError, setNameError] = useState("");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -4160,36 +4150,6 @@ export default function BobroToTheMoon({
     onAccessChange?.({ mode: "guest" });
   }, [loadProgressForMode, onAccessChange]);
 
-  const connectHolderWallet = useCallback(async () => {
-    if (walletStatus === "connecting" || walletStatus === "checking") return;
-
-    autoStartGuestRunRef.current = false;
-    setWalletStatus("connecting");
-    setAccessMessage("");
-
-    try {
-      const wallet = await connectWallet();
-      setWalletAddress(wallet);
-      setManualWalletAddress(wallet);
-      setWalletStatus("checking");
-
-      const holder = await checkHolder(wallet);
-
-      if (holder.isHolder) {
-        activateHolderAccess(wallet, holder.bobrosCount);
-        return;
-      }
-
-      activateGuestAccess("NO BOBRO NFT DETECTED. You can still play as guest.");
-    } catch {
-      setMode("guest");
-      setModeChosen(false);
-      setWalletStatus("error");
-      setAccessMessage("Wallet check unavailable. You can still play as guest.");
-      onAccessChange?.({ mode: "guest" });
-    }
-  }, [activateGuestAccess, activateHolderAccess, onAccessChange, walletStatus]);
-
   const startGuestRunFromMenu = useCallback(() => {
     startMusic("normal");
     autoStartGuestRunRef.current = true;
@@ -4197,7 +4157,7 @@ export default function BobroToTheMoon({
   }, [playAsGuest, startMusic]);
 
   const checkEnteredWalletAddress = useCallback(async () => {
-    if (walletStatus === "connecting" || walletStatus === "checking") return;
+    if (walletStatus === "checking") return;
 
     autoStartGuestRunRef.current = false;
     const wallet = normalizeWalletInput(manualWalletAddress);
@@ -4341,7 +4301,6 @@ export default function BobroToTheMoon({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName,
-          xHandle: getValidXHandle(xHandle),
           wallet: walletAddress || playerWallet,
           runId: runResult.runId,
           score: runResult.score,
@@ -4374,7 +4333,7 @@ export default function BobroToTheMoon({
     } catch {
       setSaveStatus("error");
     }
-  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress, xHandle]);
+  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress]);
 
   const shareRunOnX = useCallback(() => {
     if (!runResult) return;
@@ -4412,10 +4371,6 @@ ${shareUrl}`;
 
     setNameError("");
     setPlayerName(normalizePlayerName(value));
-  }, []);
-
-  const updateXHandle = useCallback((value: string) => {
-    setXHandle(normalizeXHandle(value));
   }, []);
 
   const clearCountdownTimeout = useCallback(() => {
@@ -4609,14 +4564,26 @@ ${shareUrl}`;
     const context = canvas.getContext("2d");
     if (!context) return undefined;
 
+    let activeFrameMs = canvasFrameMsDesktop;
+    let idleFrameMs = canvasIdleFrameMsDesktop;
+
     const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
       const nextWidth = Math.max(300, Math.floor(rect.width || defaultWidth));
       const nextHeight = Math.max(460, Math.floor(rect.height || defaultHeight));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const performanceProfile = getCanvasPerformanceProfile(nextWidth);
+      const dpr = Math.min(window.devicePixelRatio || 1, performanceProfile.dprCap);
+      activeFrameMs = performanceProfile.activeFrameMs;
+      idleFrameMs = performanceProfile.idleFrameMs;
 
-      canvas.width = Math.floor(nextWidth * dpr);
-      canvas.height = Math.floor(nextHeight * dpr);
+      const nextCanvasWidth = Math.floor(nextWidth * dpr);
+      const nextCanvasHeight = Math.floor(nextHeight * dpr);
+
+      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
+        canvas.width = nextCanvasWidth;
+        canvas.height = nextCanvasHeight;
+      }
+
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       resizeWorld(worldRef.current, nextWidth, nextHeight);
       drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
@@ -4629,12 +4596,21 @@ ${shareUrl}`;
     resizeObserver?.observe(canvas);
 
     const tick = (time: number) => {
+      const world = worldRef.current;
+      const isActiveRun = world.status === "playing" || world.status === "countdown";
+      const targetFrameMs = isActiveRun ? activeFrameMs : idleFrameMs;
+
+      if (lastFrameTimeRef.current !== null && time - lastFrameTimeRef.current < targetFrameMs) {
+        animationFrameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
       const previousTime = lastFrameTimeRef.current ?? time;
       const deltaSeconds = Math.min(0.034, Math.max(0, (time - previousTime) / 1000));
       lastFrameTimeRef.current = time;
 
-      updateWorld(worldRef.current, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
-      drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
+      updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
+      drawWorld(context, world, assetsRef.current, selectedHead);
       syncHud();
 
       animationFrameRef.current = window.requestAnimationFrame(tick);
@@ -4849,36 +4825,29 @@ ${shareUrl}`;
                     <div className={styles.prizeStrip} aria-label="Weekly contest rewards">
                       <b>#1 WINS BOBROS NFT</b>
                       <b>TOP 3 GET WHITELIST</b>
-                      <b>MANUAL REVIEW</b>
+                      <b>HOLDER REWARDS</b>
                     </div>
                   </div>
 
-                  <button className={`${styles.startButton} ${styles.primaryRunButton}`} type="button" onClick={startGuestRunFromMenu}>
-                    START GUEST RUN
+                  <button
+                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
+                    type="button"
+                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
+                    disabled={modeChosen && !assetsLoaded}
+                  >
+                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
                   </button>
 
-                  <div className={styles.holderTerminal} aria-label="Holder access terminal">
-                    <div className={styles.terminalHeader}>
-                      <strong>HOLDER ACCESS</strong>
-                      <span>CONNECT OR PASTE WALLET</span>
-                    </div>
-                    <button
-                      className={styles.startButton}
-                      type="button"
-                      onClick={connectHolderWallet}
-                      disabled={walletStatus === "connecting" || walletStatus === "checking"}
-                    >
-                      {walletStatus === "connecting" ? "CONNECTING..." : walletStatus === "checking" ? "CHECKING..." : "HOLDER LOGIN"}
-                    </button>
+                  <div className={styles.holderTerminal} aria-label="Holder wallet check">
                     <label className={styles.walletEntry}>
-                      <span>PASTE HOLDER WALLET</span>
+                      <span>VERIFY HOLDER ADDRESS FOR WEEKLY REWARDS</span>
                       <div>
                         <input
                           type="text"
                           inputMode="text"
                           autoComplete="off"
                           spellCheck={false}
-                          placeholder="PASTE SOLANA WALLET"
+                          placeholder="PASTE HOLDER WALLET ADDRESS"
                           value={manualWalletAddress}
                           onChange={(event) => setManualWalletAddress(event.target.value)}
                           onKeyDown={(event) => {
@@ -4892,45 +4861,25 @@ ${shareUrl}`;
                           className={styles.startButton}
                           type="button"
                           onClick={checkEnteredWalletAddress}
-                          disabled={walletStatus === "connecting" || walletStatus === "checking"}
+                          disabled={walletStatus === "checking"}
                         >
                           {walletStatus === "checking" ? "..." : "VERIFY"}
                         </button>
                       </div>
                     </label>
                     <div className={styles.safetyLine}>
-                      <span>NO SIGNATURE · NO TRANSACTION</span>
-                      <span>ADDRESS CHECK ONLY</span>
+                      <span>Paste address only. No wallet connection.</span>
                     </div>
                     {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
                     {accessMessage ? (
                       <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                     ) : null}
                   </div>
-
-                  {modeChosen ? (
-                    <button
-                      className={`${styles.startButton} ${styles.bountyRunButton}`}
-                      type="button"
-                      onClick={startGame}
-                      disabled={!assetsLoaded}
-                    >
-                      {!assetsLoaded ? "LOADING ASSETS" : readyStartLabel}
-                    </button>
-                  ) : null}
                 </div>
 
                 <div className={styles.menuSkinPanel}>
                   <div className={styles.skinSelector} aria-label="Choose your Bobro">
                     <strong className={styles.skinTitle}>SELECT BOBRO</strong>
-                    <div className={styles.skinSelectedPreview}>
-                      <img src={selectedHeadOption.src} alt="" aria-hidden="true" />
-                      <div>
-                        <span>SELECTED</span>
-                        <strong>{selectedHeadOption.label}</strong>
-                        <small>{mode === "holder" ? `BEST ${formatMcap(bestUnlockScore)}` : "GUEST DEFAULT ONLY"}</small>
-                      </div>
-                    </div>
                     <div className={styles.skinGrid}>
                       {headOptions.map((head) => {
                         const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";
@@ -4990,31 +4939,18 @@ ${shareUrl}`;
                   </div>
                 </dl>
                 {result.mode === "holder" ? (
-                  <>
-                    <label className={styles.nameEntry}>
-                      <span>ENTER YOUR NAME</span>
-                      <input
-                        type="text"
-                        inputMode="text"
-                        maxLength={16}
-                        value={playerName}
-                        onChange={(event) => updatePlayerName(event.target.value)}
-                        onBlur={commitPlayerName}
-                        aria-invalid={Boolean(nameError)}
-                      />
-                    </label>
-                    <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
-                      <span>X HANDLE</span>
-                      <input
-                        type="text"
-                        inputMode="text"
-                        maxLength={15}
-                        placeholder="optional"
-                        value={xHandle}
-                        onChange={(event) => updateXHandle(event.target.value)}
-                      />
-                    </label>
-                  </>
+                  <label className={styles.nameEntry}>
+                    <span>ENTER YOUR NAME</span>
+                    <input
+                      type="text"
+                      inputMode="text"
+                      maxLength={16}
+                      value={playerName}
+                      onChange={(event) => updatePlayerName(event.target.value)}
+                      onBlur={commitPlayerName}
+                      aria-invalid={Boolean(nameError)}
+                    />
+                  </label>
                 ) : (
                   <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
                 )}
