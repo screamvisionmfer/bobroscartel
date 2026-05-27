@@ -499,7 +499,12 @@ function formatMarketCap(score: number) {
 function normalizePlayerName(value: string) {
   return value.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 16);
 }
-
+function normalizeXHandle(value: string) {
+  return value
+    .replace(/^@+/, "")
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .slice(0, 15);
+}
 function hasUrlLikeText(value: string) {
   return /https?:\/\/|www\.|[a-z0-9-]+\.(?:com|net|org|io|gg|xyz|lol|app)\b/i.test(value);
 }
@@ -3965,6 +3970,7 @@ export default function BobroToTheMoon({
   const [selectedHead, setSelectedHead] = useState<HeadKey>("bobro-head");
   const [bestUnlockScore, setBestUnlockScore] = useState(0);
   const [playerName, setPlayerName] = useState(defaultPlayerName);
+  const [xHandle, setXHandle] = useState("");
   const [nameError, setNameError] = useState("");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -4329,6 +4335,7 @@ export default function BobroToTheMoon({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           displayName,
+          xHandle: normalizeXHandle(xHandle),
           wallet: walletAddress || playerWallet,
           runId: runResult.runId,
           score: runResult.score,
@@ -4361,7 +4368,7 @@ export default function BobroToTheMoon({
     } catch {
       setSaveStatus("error");
     }
-  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress]);
+  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress, xHandle]);
 
   const shareRunOnX = useCallback(() => {
     if (!runResult) return;
@@ -4372,7 +4379,7 @@ export default function BobroToTheMoon({
 
 Think you can beat my run?
 
-🏆 Weekly rewards for Bobros holders
+🏆 Weekly rewards for @bobroscartel holders
 🥇 #1 wins a Bobros NFT
 🎟 Top 3 get whitelist with special Bobros mint price
 
@@ -4966,21 +4973,36 @@ ${shareUrl}`;
                   </div>
                 </dl>
                 {result.mode === "holder" ? (
-                  <label className={styles.nameEntry}>
-                    <span>ENTER YOUR NAME</span>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      maxLength={16}
-                      value={playerName}
-                      onChange={(event) => updatePlayerName(event.target.value)}
-                      onBlur={commitPlayerName}
-                      aria-invalid={Boolean(nameError)}
-                    />
-                  </label>
+                  <>
+                    <label className={styles.nameEntry}>
+                      <span>ENTER YOUR NAME</span>
+                      <input
+                        type="text"
+                        inputMode="text"
+                        maxLength={16}
+                        value={playerName}
+                        onChange={(event) => updatePlayerName(event.target.value)}
+                        onBlur={commitPlayerName}
+                        aria-invalid={Boolean(nameError)}
+                      />
+                    </label>
+
+                    <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
+                      <span>X HANDLE</span>
+                      <input
+                        type="text"
+                        inputMode="text"
+                        maxLength={15}
+                        value={xHandle}
+                        onChange={(event) => setXHandle(normalizeXHandle(event.target.value))}
+                        placeholder="without @"
+                      />
+                    </label>
+                  </>
                 ) : (
                   <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
                 )}
+                
                 {nameError ? <small className={styles.formError}>{nameError}</small> : null}
                 {runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
                 {result.mode === "holder" && result.leaderboardEligible ? (
@@ -5020,7 +5042,7 @@ ${shareUrl}`;
         ) : null}
       </div>
 
-      <span className={styles.gameCredit}>built by scream.vision</span>
+      <span className={styles.gameCredit}>bobro to the moon v1.0</span>
 
       <div className={styles.gameActions}>
         <button
