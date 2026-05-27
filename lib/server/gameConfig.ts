@@ -1,6 +1,6 @@
 export const maxScore = 1_000_000_000_000;
 
-export const allowedSkins = new Set(["bobro-head", "bobohazard", "high-bobo", "luchador", "skelebobo", "diamondbobo", "og-rekt"]);
+export const allowedSkins = new Set(["bobro-head", "bobohazard", "high-bobo", "luchador", "skelebobo", "diamondbobo", "og-rekt", "theoneape"]);
 
 export const allowedZones = new Set([
   "BACKALLEY",
@@ -9,7 +9,7 @@ export const allowedZones = new Set([
   "CLOUDS",
   "STORM MARKET",
   "MOON",
-  "CRYPTO ORBIT",
+  "JUNGLE BAY ABYSS",
   "ASCENSION",
   "BILLIONAIRE CLUB",
   "BOBO HEAVEN",
@@ -22,7 +22,7 @@ export const zoneMinimumScores: Record<string, number> = {
   CLOUDS: 5_000_000,
   "STORM MARKET": 25_000_000,
   MOON: 100_000_000,
-  "CRYPTO ORBIT": 500_000_000,
+  "JUNGLE BAY ABYSS": 500_000_000,
   ASCENSION: 2_000_000_000,
   "BILLIONAIRE CLUB": 10_000_000_000,
   "BOBO HEAVEN": 69_000_000_000,

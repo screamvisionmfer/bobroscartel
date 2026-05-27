@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         entries: entries.map((entry, index) => ({
           rank: index + 1,
           displayName: entry.displayName,
+          xHandle: entry.xHandle,
           wallet: entry.wallet,
           score: entry.score,
           formattedMcap: entry.formattedMcap,

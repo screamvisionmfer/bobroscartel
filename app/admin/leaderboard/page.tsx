@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 type AdminEntry = {
   rank: number;
   displayName?: string;
+  xHandle?: string;
   wallet: string;
   score: number;
   formattedMcap?: string;
@@ -217,11 +218,10 @@ export default function AdminLeaderboardPage() {
           <label style={{ display: "grid", gap: 6, fontWeight: 900, textTransform: "uppercase" }}>
             ADMIN_REVIEW_SECRET
             <input
-              type="password"
               value={secret}
               onChange={(event) => setSecret(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
+              placeholder="Paste secret from Vercel env"
+              type="password"
               style={{ border: "2px solid #1d160f", borderRadius: 999, padding: "12px 14px", font: "inherit" }}
             />
           </label>

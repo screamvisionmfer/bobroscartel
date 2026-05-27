@@ -13,6 +13,7 @@ type LeaderboardEntry = {
   zone?: string;
   bobrosCount: number;
   submittedAt: string;
+  xHandle?: string;
 };
 
 type LeaderboardResponse = {
@@ -50,6 +51,10 @@ function shortenWallet(wallet: string) {
   if (wallet.length <= 12) return wallet;
 
   return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+}
+
+function getXUrl(handle: string) {
+  return `https://x.com/${handle.replace(/^@+/, "")}`;
 }
 
 function getResetCountdown(weekEndsAt?: string, serverTime?: string) {
@@ -140,10 +145,17 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
           <div className={styles.leaderboardEmpty}>LOADING SUSPECTS...</div>
         ) : visibleEntries.length ? (
           visibleEntries.map((entry) => (
-            <article className={styles.leaderboardRow} key={`${entry.wallet}-${entry.submittedAt}`}>
+            <article className={styles.leaderboardRow} key={entry.wallet}>
               <strong>#{entry.rank}</strong>
               <div>
-                <span>{entry.displayName || "ANON BOBRO"}</span>
+                <span>
+                  {entry.displayName || "ANON BOBRO"}
+                  {entry.xHandle ? (
+                    <a className={styles.xHandleLink} href={getXUrl(entry.xHandle)} target="_blank" rel="noopener noreferrer" aria-label={`Open @${entry.xHandle} on X`}>
+                      X
+                    </a>
+                  ) : null}
+                </span>
                 <small>{shortenWallet(entry.wallet)} / {entry.bobrosCount} BOBRO HOLDER</small>
               </div>
               <b>{entry.formattedMcap || formatMarketCap(entry.score)}</b>

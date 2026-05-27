@@ -13,6 +13,7 @@ export type LeaderboardEntry = {
   bobrosCount: number;
   submittedAt: string;
   weekId: string;
+  xHandle?: string;
 };
 
 export type StoredLeaderboardEntry = Omit<LeaderboardEntry, "rank"> & {
@@ -28,6 +29,8 @@ const leaderboardPrefix = "bobros:leaderboard";
 
 export const leaderboardKeys = {
   entry: (entryId: string) => `${leaderboardPrefix}:entry:${entryId}`,
+  weeklyEntry: (weekId: string, wallet: string) => `${leaderboardPrefix}:entry:weekly:${weekId}:${wallet}`,
+  allTimeEntry: (wallet: string) => `${leaderboardPrefix}:entry:all-time:${wallet}`,
   weekly: (weekId: string) => `${leaderboardPrefix}:weekly:${weekId}`,
   allTime: () => `${leaderboardPrefix}:all-time`,
   weeklyBest: (weekId: string, wallet: string) => `${leaderboardPrefix}:best:weekly:${weekId}:${wallet}`,
@@ -170,13 +173,21 @@ function getMemoryPlayerBest(wallet: string | undefined, weekId?: string) {
   }, 0);
 }
 
-async function getRedisEntriesFromSet(key: string, limit: number) {
+async function getRedisEntriesFromSet(key: string, limit: number, scope: "weekly" | "all-time", weekId?: string) {
   const redis = getRedis();
 
   if (!redis) return null;
 
-  const entryIds = await redis.zrange<string[]>(key, 0, limit - 1, { rev: true });
-  const entries = await Promise.all(entryIds.map((entryId) => redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(entryId))));
+  const members = await redis.zrange<string[]>(key, 0, limit - 1, { rev: true });
+  const entries = await Promise.all(
+    members.map(async (member) => {
+      if (scope === "weekly" && weekId) {
+        return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.weeklyEntry(weekId, member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
+      }
+
+      return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.allTimeEntry(member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
+    }),
+  );
 
   return entries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
 }
@@ -224,7 +235,7 @@ export async function getLeaderboard(wallet?: string, scope: "weekly" | "all-tim
     };
   }
 
-  const scopedEntries = await getRedisEntriesFromSet(scope === "weekly" ? leaderboardKeys.weekly(weekId) : leaderboardKeys.allTime(), 25);
+  const scopedEntries = await getRedisEntriesFromSet(scope === "weekly" ? leaderboardKeys.weekly(weekId) : leaderboardKeys.allTime(), 25, scope, weekId);
 
   return {
     weekId,
@@ -241,6 +252,7 @@ export async function addScore(payload: {
   score: number;
   wallet: string;
   displayName?: string;
+  xHandle?: string;
   selectedSkin: string;
   zone: string;
   bobrosCount: number;
@@ -251,9 +263,14 @@ export async function addScore(payload: {
 }) {
   const normalizedScore = Math.max(0, Math.floor(payload.score));
   const now = new Date().toISOString();
-  const entry: StoredLeaderboardEntry = {
-    entryId: randomUUID(),
-    displayName: sanitizeDisplayName(payload.displayName),
+  const displayName = sanitizeDisplayName(payload.displayName);
+  const xHandle = sanitizeXHandle(payload.xHandle);
+  const redis = getRedis();
+
+  const makeEntry = (existing?: StoredLeaderboardEntry | null): StoredLeaderboardEntry => ({
+    entryId: existing?.entryId ?? `${payload.weekId}:${payload.wallet}`,
+    displayName,
+    xHandle,
     wallet: payload.wallet,
     score: normalizedScore,
     formattedMcap: formatMcap(normalizedScore),
@@ -261,18 +278,30 @@ export async function addScore(payload: {
     zone: payload.zone,
     bobrosCount: payload.bobrosCount,
     submittedAt: now,
-    createdAt: now,
+    createdAt: existing?.createdAt ?? now,
     weekId: payload.weekId,
     runId: payload.runId,
     runDurationMs: payload.runDurationMs,
     validationStatus: "accepted",
     validationReason: payload.validationReason,
-  };
-  const redis = getRedis();
+  });
 
   if (!redis) {
     const currentEntries = getMemoryEntries();
-    currentEntries.push(entry);
+    const existingIndex = currentEntries.findIndex((entry) => entry.weekId === payload.weekId && entry.wallet === payload.wallet);
+    const existingEntry = existingIndex >= 0 ? currentEntries[existingIndex] : undefined;
+
+    if (existingEntry && normalizedScore <= existingEntry.score) {
+      return getLeaderboard(payload.wallet, "weekly");
+    }
+
+    const entry = makeEntry(existingEntry);
+
+    if (existingIndex >= 0) {
+      currentEntries[existingIndex] = entry;
+    } else {
+      currentEntries.push(entry);
+    }
 
     globalWithLeaderboard.bobrosLeaderboard = currentEntries
       .sort((left, right) => right.score - left.score || left.submittedAt.localeCompare(right.submittedAt))
@@ -281,17 +310,31 @@ export async function addScore(payload: {
     return getLeaderboard(payload.wallet, "weekly");
   }
 
-  await redis
-    .pipeline()
-    .set(leaderboardKeys.entry(entry.entryId), entry)
-    .zadd(leaderboardKeys.weekly(payload.weekId), { score: normalizedScore, member: entry.entryId })
-    .zadd(leaderboardKeys.allTime(), { score: normalizedScore, member: entry.entryId })
-    .exec();
-
-  await Promise.all([
-    setRedisBestScore(leaderboardKeys.weeklyBest(payload.weekId, payload.wallet), normalizedScore),
-    setRedisBestScore(leaderboardKeys.allTimeBest(payload.wallet), normalizedScore),
+  const weeklyEntryKey = leaderboardKeys.weeklyEntry(payload.weekId, payload.wallet);
+  const allTimeEntryKey = leaderboardKeys.allTimeEntry(payload.wallet);
+  const [existingWeeklyEntry, existingAllTimeEntry] = await Promise.all([
+    redis.get<StoredLeaderboardEntry>(weeklyEntryKey),
+    redis.get<StoredLeaderboardEntry>(allTimeEntryKey),
   ]);
+
+  if (existingWeeklyEntry && normalizedScore <= existingWeeklyEntry.score) {
+    return getLeaderboard(payload.wallet, "weekly");
+  }
+
+  const weeklyEntry = makeEntry(existingWeeklyEntry);
+  const pipeline = redis.pipeline()
+    .set(weeklyEntryKey, weeklyEntry)
+    .zadd(leaderboardKeys.weekly(payload.weekId), { score: normalizedScore, member: payload.wallet })
+    .set(leaderboardKeys.weeklyBest(payload.weekId, payload.wallet), normalizedScore);
+
+  if (!existingAllTimeEntry || normalizedScore > existingAllTimeEntry.score) {
+    pipeline
+      .set(allTimeEntryKey, { ...weeklyEntry, entryId: `all-time:${payload.wallet}` })
+      .zadd(leaderboardKeys.allTime(), { score: normalizedScore, member: payload.wallet })
+      .set(leaderboardKeys.allTimeBest(payload.wallet), normalizedScore);
+  }
+
+  await pipeline.exec();
 
   return getLeaderboard(payload.wallet, "weekly");
 }
@@ -303,7 +346,7 @@ export async function getAdminLeaderboard(weekId = getUtcWeekId(), limit = 100) 
     return rankedAdminEntries(getMemoryEntries().filter((entry) => entry.weekId === weekId), limit);
   }
 
-  const entries = await getRedisEntriesFromSet(leaderboardKeys.weekly(weekId), limit);
+  const entries = await getRedisEntriesFromSet(leaderboardKeys.weekly(weekId), limit, "weekly", weekId);
 
   return rankedAdminEntries(entries ?? [], limit);
 }
@@ -360,9 +403,11 @@ export async function resetLeaderboard(options: {
   }
 
   const weeklyKey = leaderboardKeys.weekly(weekId);
-  const weeklyEntryIds = await redis.zrange<string[]>(weeklyKey, 0, -1);
+  const weeklyMembers = await redis.zrange<string[]>(weeklyKey, 0, -1);
   const weeklyEntries = await Promise.all(
-    weeklyEntryIds.map((entryId) => redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(entryId))),
+    weeklyMembers.map(async (member) => {
+      return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.weeklyEntry(weekId, member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
+    }),
   );
   const existingWeeklyEntries = weeklyEntries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
   const weeklyWallets = Array.from(new Set(existingWeeklyEntries.map((entry) => entry.wallet)));
@@ -371,16 +416,17 @@ export async function resetLeaderboard(options: {
 
   if (scope === "weekly" || scope === "all") {
     keysPlanned.add(weeklyKey);
-    weeklyEntryIds.forEach((entryId) => keysPlanned.add(leaderboardKeys.entry(entryId)));
+    weeklyMembers.forEach((member) => keysPlanned.add(leaderboardKeys.weeklyEntry(weekId, member)));
+    weeklyMembers.forEach((member) => keysPlanned.add(leaderboardKeys.entry(member)));
     weeklyWallets.forEach((wallet) => keysPlanned.add(leaderboardKeys.weeklyBest(weekId, wallet)));
   }
 
   if (scope === "all-time" || scope === "all") {
     keysPlanned.add(leaderboardKeys.allTime());
-    existingWeeklyEntries.forEach((entry) => keysPlanned.add(leaderboardKeys.allTimeBest(entry.wallet)));
-    if (scope === "all-time") {
-      weeklyEntryIds.forEach((entryId) => keysPlanned.add(leaderboardKeys.entry(entryId)));
-    }
+    weeklyWallets.forEach((wallet) => {
+      keysPlanned.add(leaderboardKeys.allTimeEntry(wallet));
+      keysPlanned.add(leaderboardKeys.allTimeBest(wallet));
+    });
   }
 
   const planned = Array.from(keysPlanned);

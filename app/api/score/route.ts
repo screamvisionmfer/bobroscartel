@@ -12,6 +12,7 @@ type ScorePayload = {
   wallet?: unknown;
   score?: unknown;
   formattedMcap?: unknown;
+  xHandle?: unknown;
   selectedSkin?: unknown;
   zone?: unknown;
   bobrosCount?: unknown;
@@ -26,6 +27,7 @@ type ValidatedScorePayload =
         selectedSkin: string;
         zone: string;
         displayName?: string;
+        xHandle?: string;
         runId: string;
       };
     }
@@ -54,6 +56,7 @@ function validateScorePayload(payload: ScorePayload): ValidatedScorePayload {
   const selectedSkin = typeof payload.selectedSkin === "string" ? payload.selectedSkin.trim() : "";
   const zone = typeof payload.zone === "string" ? payload.zone.trim() : "";
   const displayName = typeof payload.displayName === "string" ? payload.displayName : undefined;
+  const xHandle = typeof payload.xHandle === "string" ? payload.xHandle.trim().replace(/^@+/, "") : undefined;
   const runId = typeof payload.runId === "string" ? payload.runId.trim() : "";
 
   if (!runId || runId.length > 80) {
@@ -86,6 +89,10 @@ function validateScorePayload(payload: ScorePayload): ValidatedScorePayload {
     return { error: "Invalid display name" as const };
   }
 
+  if (xHandle !== undefined && (!/^[a-zA-Z0-9_]{1,15}$/.test(xHandle))) {
+    return { error: "Invalid X handle" as const };
+  }
+
   return {
     value: {
       wallet,
@@ -93,6 +100,7 @@ function validateScorePayload(payload: ScorePayload): ValidatedScorePayload {
       selectedSkin,
       zone,
       displayName,
+      xHandle,
       runId,
     },
   };
@@ -188,6 +196,7 @@ export async function POST(request: Request) {
       wallet: holder.wallet,
       bobrosCount: holder.bobrosCount,
       displayName: validated.value.displayName,
+      xHandle: validated.value.xHandle,
       selectedSkin: validated.value.selectedSkin,
       zone: validated.value.zone,
       weekId: runValidation.session.weekId,
