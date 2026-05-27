@@ -320,153 +320,83 @@ export type LeaderboardResetResult = {
   scope: LeaderboardResetScope;
   weekId: string;
   dryRun: boolean;
-  redis: boolean;
-  entriesMatched: number;
-  entryIds: string[];
-  wallets: string[];
-  keysDeleted: string[];
-  keysTouched: string[];
+  storage: "redis" | "memory";
+  entriesFound: number;
+  keysPlanned: string[];
+  deletedKeys: string[];
 };
 
-function uniqueValues(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
-async function getRedisEntriesByIds(entryIds: string[]) {
-  const redis = getRedis();
-
-  if (!redis || entryIds.length === 0) return [];
-
-  const entries = await Promise.all(entryIds.map((entryId) => redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(entryId))));
-  return entries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
-}
-
-async function getRedisEntryIdsFromSet(key: string) {
-  const redis = getRedis();
-
-  if (!redis) return [];
-
-  return redis.zrange<string[]>(key, 0, -1);
-}
-
-async function rebuildRedisAllTimeBest(wallets: string[]) {
-  const redis = getRedis();
-
-  if (!redis || wallets.length === 0) return;
-
-  const allTimeEntryIds = await getRedisEntryIdsFromSet(leaderboardKeys.allTime());
-  const allTimeEntries = await getRedisEntriesByIds(allTimeEntryIds);
-  const pipeline = redis.pipeline();
-
-  for (const wallet of wallets) {
-    const best = allTimeEntries.reduce((bestScore, entry) => {
-      if (entry.wallet !== wallet) return bestScore;
-      return Math.max(bestScore, entry.score);
-    }, 0);
-
-    if (best > 0) {
-      pipeline.set(leaderboardKeys.allTimeBest(wallet), best);
-    } else {
-      pipeline.del(leaderboardKeys.allTimeBest(wallet));
-    }
-  }
-
-  await pipeline.exec();
-}
-
-export async function resetLeaderboard(payload: {
-  weekId?: string;
+export async function resetLeaderboard(options: {
   scope?: LeaderboardResetScope;
+  weekId?: string;
   dryRun?: boolean;
 } = {}): Promise<LeaderboardResetResult> {
-  const weekId = payload.weekId || getUtcWeekId();
-  const scope = payload.scope || "weekly";
-  const dryRun = Boolean(payload.dryRun);
+  const scope = options.scope ?? "weekly";
+  const weekId = options.weekId ?? getUtcWeekId();
+  const dryRun = options.dryRun ?? false;
   const redis = getRedis();
 
   if (!redis) {
-    const entries = getMemoryEntries();
-    const matchedEntries = entries.filter((entry) => scope === "all-time" || entry.weekId === weekId);
-    const entryIds = matchedEntries.map((entry) => entry.entryId);
-    const wallets = uniqueValues(matchedEntries.map((entry) => entry.wallet));
+    const currentEntries = getMemoryEntries();
+    const entriesToRemove = currentEntries.filter((entry) => scope === "all" || scope === "all-time" || entry.weekId === weekId);
 
     if (!dryRun) {
-      globalWithLeaderboard.bobrosLeaderboard = scope === "all-time" || scope === "all"
-        ? []
-        : entries.filter((entry) => entry.weekId !== weekId);
+      if (scope === "weekly") {
+        globalWithLeaderboard.bobrosLeaderboard = currentEntries.filter((entry) => entry.weekId !== weekId);
+      } else {
+        globalWithLeaderboard.bobrosLeaderboard = [];
+      }
     }
 
     return {
       scope,
       weekId,
       dryRun,
-      redis: false,
-      entriesMatched: matchedEntries.length,
-      entryIds,
-      wallets,
-      keysDeleted: [],
-      keysTouched: [],
+      storage: "memory",
+      entriesFound: entriesToRemove.length,
+      keysPlanned: [],
+      deletedKeys: [],
     };
   }
 
-  const weeklyEntryIds = scope === "all-time" ? [] : await getRedisEntryIdsFromSet(leaderboardKeys.weekly(weekId));
-  const allTimeEntryIds = scope === "weekly" ? [] : await getRedisEntryIdsFromSet(leaderboardKeys.allTime());
-  const entryIds = uniqueValues(scope === "all" ? [...weeklyEntryIds, ...allTimeEntryIds] : scope === "all-time" ? allTimeEntryIds : weeklyEntryIds);
-  const entries = await getRedisEntriesByIds(entryIds);
-  const wallets = uniqueValues(entries.map((entry) => entry.wallet));
-  const keysDeleted = [
-    ...(scope !== "all-time" ? [leaderboardKeys.weekly(weekId)] : []),
-    ...(scope !== "weekly" ? [leaderboardKeys.allTime()] : []),
-    ...entries.map((entry) => leaderboardKeys.entry(entry.entryId)),
-    ...(scope !== "all-time" ? wallets.map((wallet) => leaderboardKeys.weeklyBest(weekId, wallet)) : []),
-    ...(scope !== "weekly" ? wallets.map((wallet) => leaderboardKeys.allTimeBest(wallet)) : []),
-  ];
-  const keysTouched = [
-    ...(scope === "weekly" ? wallets.map((wallet) => leaderboardKeys.allTimeBest(wallet)) : []),
-  ];
+  const weeklyKey = leaderboardKeys.weekly(weekId);
+  const weeklyEntryIds = await redis.zrange<string[]>(weeklyKey, 0, -1);
+  const weeklyEntries = await Promise.all(
+    weeklyEntryIds.map((entryId) => redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(entryId))),
+  );
+  const existingWeeklyEntries = weeklyEntries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
+  const weeklyWallets = Array.from(new Set(existingWeeklyEntries.map((entry) => entry.wallet)));
 
-  if (!dryRun) {
-    const pipeline = redis.pipeline();
+  const keysPlanned = new Set<string>();
 
-    if (scope !== "all-time") {
-      pipeline.del(leaderboardKeys.weekly(weekId));
-      for (const wallet of wallets) {
-        pipeline.del(leaderboardKeys.weeklyBest(weekId, wallet));
-      }
+  if (scope === "weekly" || scope === "all") {
+    keysPlanned.add(weeklyKey);
+    weeklyEntryIds.forEach((entryId) => keysPlanned.add(leaderboardKeys.entry(entryId)));
+    weeklyWallets.forEach((wallet) => keysPlanned.add(leaderboardKeys.weeklyBest(weekId, wallet)));
+  }
+
+  if (scope === "all-time" || scope === "all") {
+    keysPlanned.add(leaderboardKeys.allTime());
+    existingWeeklyEntries.forEach((entry) => keysPlanned.add(leaderboardKeys.allTimeBest(entry.wallet)));
+    if (scope === "all-time") {
+      weeklyEntryIds.forEach((entryId) => keysPlanned.add(leaderboardKeys.entry(entryId)));
     }
+  }
 
-    if (scope !== "weekly") {
-      pipeline.del(leaderboardKeys.allTime());
-      for (const wallet of wallets) {
-        pipeline.del(leaderboardKeys.allTimeBest(wallet));
-      }
-    }
+  const planned = Array.from(keysPlanned);
 
-    for (const entry of entries) {
-      pipeline.del(leaderboardKeys.entry(entry.entryId));
-
-      if (scope === "weekly") {
-        pipeline.zrem(leaderboardKeys.allTime(), entry.entryId);
-      }
-    }
-
-    await pipeline.exec();
-
-    if (scope === "weekly") {
-      await rebuildRedisAllTimeBest(wallets);
-    }
+  if (!dryRun && planned.length > 0) {
+    await redis.del(...planned);
   }
 
   return {
     scope,
     weekId,
     dryRun,
-    redis: true,
-    entriesMatched: entries.length,
-    entryIds,
-    wallets,
-    keysDeleted,
-    keysTouched,
+    storage: "redis",
+    entriesFound: existingWeeklyEntries.length,
+    keysPlanned: planned,
+    deletedKeys: dryRun ? [] : planned,
   };
 }
 

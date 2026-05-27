@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getUtcWeekId } from "../../../../../lib/server/gameConfig";
-import { resetLeaderboard, type LeaderboardResetScope } from "../../../../../lib/server/leaderboardStore";
+import { getAdminLeaderboard } from "../../../../lib/server/leaderboardStore";
+import { getUtcWeekId } from "../../../../lib/server/gameConfig";
 
 const weekIdPattern = /^\d{4}-W\d{2}$/;
-const allowedScopes = new Set<LeaderboardResetScope>(["weekly", "all-time", "all"]);
+const defaultLimit = 100;
+const maxLimit = 250;
 
 function jsonError(message: string, status: number) {
   return NextResponse.json(
@@ -15,27 +16,7 @@ function jsonError(message: string, status: number) {
   );
 }
 
-function parseBoolean(value: unknown) {
-  if (value === true) return true;
-  if (typeof value !== "string") return false;
-  return ["1", "true", "yes", "y"].includes(value.toLowerCase());
-}
-
-async function readBody(request: Request) {
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-
-  if (contentLength > 5_000) {
-    throw new Error("Body too large");
-  }
-
-  if (!request.headers.get("content-type")?.includes("application/json")) {
-    return {} as Record<string, unknown>;
-  }
-
-  return (await request.json()) as Record<string, unknown>;
-}
-
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   const adminSecret = process.env.ADMIN_REVIEW_SECRET;
 
   if (!adminSecret) {
@@ -46,47 +27,66 @@ export async function POST(request: Request) {
     return jsonError("Forbidden", 403);
   }
 
-  const url = new URL(request.url);
-  let body: Record<string, unknown>;
+  const { searchParams } = new URL(request.url);
+  const requestedWeekId = searchParams.get("weekId")?.trim();
+  const limit = parseLimit(searchParams.get("limit"));
 
-  try {
-    body = await readBody(request);
-  } catch {
-    return jsonError("Invalid request body", 400);
-  }
-
-  const rawWeekId = (body.weekId ?? url.searchParams.get("weekId") ?? getUtcWeekId()) as string;
-  const weekId = typeof rawWeekId === "string" ? rawWeekId.trim() : getUtcWeekId();
-  const rawScope = (body.scope ?? url.searchParams.get("scope") ?? "weekly") as string;
-  const scope = typeof rawScope === "string" ? rawScope.trim() : "weekly";
-  const dryRun = parseBoolean(body.dryRun ?? url.searchParams.get("dryRun"));
-
-  if (!weekIdPattern.test(weekId)) {
+  if (requestedWeekId && !weekIdPattern.test(requestedWeekId)) {
     return jsonError("Invalid weekId", 400);
   }
 
-  if (!allowedScopes.has(scope as LeaderboardResetScope)) {
-    return jsonError("Invalid scope", 400);
-  }
+  const weekId = requestedWeekId || getUtcWeekId();
 
   try {
-    const result = await resetLeaderboard({
-      weekId,
-      scope: scope as LeaderboardResetScope,
-      dryRun,
-    });
+    const entries = await getAdminLeaderboard(weekId, limit);
 
     return NextResponse.json(
       {
-        ok: true,
-        warning: "Manual admin reset endpoint. Use dryRun=true before deleting real leaderboard data.",
-        ...result,
+        weekId,
+        limit,
+        reviewNote: "Weekly rewards are manually reviewed. No-sign runs are not cryptographic proof of wallet control.",
+        entries: entries.map((entry, index) => ({
+          rank: index + 1,
+          displayName: entry.displayName,
+          wallet: entry.wallet,
+          score: entry.score,
+          formattedMcap: entry.formattedMcap,
+          bobrosCount: entry.bobrosCount,
+          selectedSkin: entry.selectedSkin,
+          zone: entry.zone,
+          weekId: entry.weekId,
+          createdAt: entry.createdAt,
+          submittedAt: entry.submittedAt,
+          runDurationMs: entry.runDurationMs,
+          runId: entry.runId,
+          flags: getReviewFlags(entry.score, entry.runDurationMs, entry.zone),
+        })),
       },
       {
         headers: { "cache-control": "no-store" },
       },
     );
   } catch {
-    return jsonError("Reset unavailable", 503);
+    return jsonError("Leaderboard unavailable", 503);
   }
+}
+
+function parseLimit(value: string | null) {
+  const parsed = Number(value ?? defaultLimit);
+
+  if (!Number.isFinite(parsed)) return defaultLimit;
+
+  return Math.max(1, Math.min(maxLimit, Math.floor(parsed)));
+}
+
+function getReviewFlags(score: number, runDurationMs: number, zone: string) {
+  const flags: string[] = [];
+  const seconds = Math.max(1, runDurationMs / 1000);
+  const scorePerSecond = score / seconds;
+
+  if (runDurationMs < 10_000) flags.push("short-run");
+  if (scorePerSecond > 1_500_000_000) flags.push("high-score-rate");
+  if (zone === "BILLIONAIRE CLUB" || zone === "BOBO HEAVEN") flags.push("late-zone");
+
+  return flags;
 }
