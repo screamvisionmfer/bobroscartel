@@ -3614,7 +3614,7 @@ function scoreCardTheme(stage: StageLabel) {
       return { top: "#a54848", middle: "#e19879", bottom: "#391d28", accent: "#f2c73a", shadow: "#6f252f", badge: "PANIC SURVIVOR" };
     case "MOON":
       return { top: "#172b55", middle: "#8ea9d8", bottom: "#f2e6bf", accent: "#f2c73a", shadow: "#10172e", badge: "MOON SURVIVOR" };
-    case "CRYPTO ORBIT":
+    case "JUNGLE BAY ABYSS":
       return { top: "#140f33", middle: "#5c4ba8", bottom: "#160d24", accent: "#8f6ed5", shadow: "#0d081c", badge: "ORBIT LEGEND" };
     case "ASCENSION":
       return { top: "#f2c73a", middle: "#fff0b8", bottom: "#d58e4d", accent: "#6ead47", shadow: "#9b6b18", badge: "ASCENSION RUN" };
