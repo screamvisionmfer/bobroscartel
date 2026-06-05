@@ -10,22 +10,30 @@ const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 const fallbackGameShareUrl = "https://www.bobroscartel.lol/game";
 const canvasDprCapDesktop = 1.25;
 const canvasDprCapMobile = 1.05;
+const canvasDprCapAndroid = 1;
 const canvasFrameMsDesktop = 1000 / 55;
 const canvasFrameMsMobile = 1000 / 40;
+const canvasFrameMsAndroid = 1000 / 36;
 const canvasIdleFrameMsDesktop = 1000 / 12;
 const canvasIdleFrameMsMobile = 1000 / 6;
+const hudSyncIntervalMsDesktop = 110;
+const hudSyncIntervalMsMobile = 155;
 
 function getCanvasPerformanceProfile(width: number) {
   const isCoarsePointer =
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(pointer: coarse)").matches
       : false;
-  const isMobileSized = width <= 760 || isCoarsePointer;
+  const isAndroid =
+    typeof window !== "undefined" && /android/i.test(window.navigator.userAgent);
+  const isSmallViewport = width <= 760;
+  const performanceMode = isSmallViewport || isCoarsePointer || isAndroid;
 
   return {
-    dprCap: isMobileSized ? canvasDprCapMobile : canvasDprCapDesktop,
-    activeFrameMs: isMobileSized ? canvasFrameMsMobile : canvasFrameMsDesktop,
-    idleFrameMs: isMobileSized ? canvasIdleFrameMsMobile : canvasIdleFrameMsDesktop,
+    performanceMode,
+    dprCap: isAndroid ? canvasDprCapAndroid : performanceMode ? canvasDprCapMobile : canvasDprCapDesktop,
+    activeFrameMs: isAndroid ? canvasFrameMsAndroid : performanceMode ? canvasFrameMsMobile : canvasFrameMsDesktop,
+    idleFrameMs: performanceMode ? canvasIdleFrameMsMobile : canvasIdleFrameMsDesktop,
   };
 }
 
@@ -269,6 +277,7 @@ type World = {
   status: WorldStatus;
   width: number;
   height: number;
+  performanceMode: boolean;
   cameraY: number;
   maxAltitude: number;
   lastScoredAltitude: number;
@@ -434,6 +443,9 @@ const futurePathPlatformTarget = 2;
 const countdownDuration = 2.8;
 const feedbackLifetime = 1.1;
 const particleLimit = 70;
+const particleLimitPerformance = 32;
+const feedbackLimitDesktop = 12;
+const feedbackLimitPerformance = 6;
 const majorMcapMilestones = [1_000_000, 10_000_000, 100_000_000, 1_000_000_000, 10_000_000_000, 69_000_000_000] as const;
 
 function pickRandom<T>(items: readonly T[]) {
@@ -471,6 +483,9 @@ const biomeDefinitions: Array<{ key: BackgroundKey; label: StageLabel; min: numb
   { key: "billionaire-club", label: "BILLIONAIRE CLUB", min: 10_000_000_000, fallback: "#6f4f2f" },
   { key: "bobo-heaven", label: "BOBO HEAVEN", min: 69_000_000_000, fallback: "#eac85e" },
 ];
+const backgroundFallbackColors = Object.fromEntries(
+  biomeDefinitions.map((biome) => [biome.key, biome.fallback]),
+) as Record<BackgroundKey, string>;
 
 function formatMcap(score: number) {
   const value = Math.max(0, Math.floor(score));
@@ -545,18 +560,77 @@ function syncDisplayScore(world: World) {
   world.score = getDisplayMcap(world);
 }
 
+const markerLabelCache = new Map<number, string>();
+
 function formatMarkerScore(score: number) {
-  return formatMcap(score);
+  const cached = markerLabelCache.get(score);
+  if (cached) return cached;
+
+  const label = formatMcap(score);
+  markerLabelCache.set(score, label);
+  return label;
 }
 
+const imageDecodeCache = new Map<string, Promise<HTMLImageElement | null>>();
+type PosterDrawParams = {
+  drawWidth: number;
+  drawHeight: number;
+  x: number;
+  extraHeight: number;
+};
+const posterDrawParamsCache = new WeakMap<HTMLImageElement, Map<string, PosterDrawParams>>();
+
 function loadCanvasImage(src: string) {
-  return new Promise<HTMLImageElement | null>((resolve) => {
+  const cached = imageDecodeCache.get(src);
+  if (cached) return cached;
+
+  const loadPromise = new Promise<HTMLImageElement | null>((resolve) => {
     const image = new Image();
 
-    image.onload = () => resolve(image);
+    image.decoding = "async";
+    image.onload = () => {
+      if (typeof image.decode !== "function") {
+        resolve(image);
+        return;
+      }
+
+      image
+        .decode()
+        .then(() => resolve(image))
+        .catch(() => resolve(image));
+    };
     image.onerror = () => resolve(null);
     image.src = src;
   });
+
+  imageDecodeCache.set(src, loadPromise);
+  return loadPromise;
+}
+
+function getPosterDrawParams(image: HTMLImageElement, width: number, height: number) {
+  const cacheKey = `${width}x${height}`;
+  let imageCache = posterDrawParamsCache.get(image);
+  if (!imageCache) {
+    imageCache = new Map<string, PosterDrawParams>();
+    posterDrawParamsCache.set(image, imageCache);
+  }
+
+  const cached = imageCache.get(cacheKey);
+  if (cached) return cached;
+
+  const overdraw = Math.max(96, height * 0.18);
+  const scale = Math.max(width / image.naturalWidth, (height + overdraw) / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const params = {
+    drawWidth,
+    drawHeight,
+    x: (width - drawWidth) / 2,
+    extraHeight: Math.max(0, drawHeight - height),
+  };
+
+  imageCache.set(cacheKey, params);
+  return params;
 }
 
 function isHeadKey(value: string | null): value is HeadKey {
@@ -622,7 +696,7 @@ function pushFloatingText(world: World, text: string, x: number, y: number, colo
   });
   world.nextFeedbackId += 1;
 
-  const feedbackLimit = isMobileWorld(world) ? 6 : 12;
+  const feedbackLimit = isPerformanceModeWorld(world) ? feedbackLimitPerformance : feedbackLimitDesktop;
   if (world.feedbackTexts.length > feedbackLimit) {
     world.feedbackTexts.splice(0, world.feedbackTexts.length - feedbackLimit);
   }
@@ -636,8 +710,19 @@ function isMobileWorldWidth(width: number) {
   return width <= 430;
 }
 
+function isPerformanceModeWidth(width: number) {
+  if (width <= 760) return true;
+  if (typeof window === "undefined") return false;
+
+  return /android/i.test(window.navigator.userAgent) || window.matchMedia?.("(pointer: coarse)").matches === true;
+}
+
 function isMobileWorld(world: Pick<World, "width">) {
   return isMobileWorldWidth(world.width);
+}
+
+function isPerformanceModeWorld(world: Pick<World, "width" | "performanceMode">) {
+  return world.performanceMode || world.width <= 760;
 }
 
 function getStage(score: number): StageLabel {
@@ -1097,13 +1182,25 @@ function validateGeneratedPathPlatform(world: World, previousPath: Platform | un
 function futurePlatformCount(world: World) {
   const topOfCamera = world.cameraY + world.height;
 
-  return world.platforms.filter((platform) => platform.y > topOfCamera).length;
+  let count = 0;
+  for (const platform of world.platforms) {
+    if (platform.y > topOfCamera) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function futurePathPlatformCount(world: World) {
   const topOfCamera = world.cameraY + world.height;
 
-  return world.platforms.filter((platform) => isRoutePlatform(platform) && platform.y > topOfCamera).length;
+  let count = 0;
+  for (const platform of world.platforms) {
+    if (isRoutePlatform(platform) && platform.y > topOfCamera) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function platformOverlapsExisting(world: World, platform: Platform) {
@@ -1505,6 +1602,7 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
     status,
     width,
     height,
+    performanceMode: isPerformanceModeWidth(width),
     cameraY: 0,
     maxAltitude: 0,
     lastScoredAltitude: 0,
@@ -1583,11 +1681,12 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
   return world;
 }
 
-function resizeWorld(world: World, width: number, height: number) {
+function resizeWorld(world: World, width: number, height: number, performanceMode = isPerformanceModeWidth(width)) {
   const widthRatio = width / Math.max(1, world.width);
 
   world.width = width;
   world.height = height;
+  world.performanceMode = performanceMode;
   world.player.x = clamp(world.player.x * widthRatio, world.player.width / 2, width - world.player.width / 2);
   world.lastPlatformCenter = clamp(world.lastPlatformCenter * widthRatio, 16, width - 16);
 
@@ -1628,7 +1727,9 @@ function triggerHitStop(world: World, durationSeconds: number) {
 }
 
 function addPaperParticles(world: World, x: number, y: number, color: string, count: number, lift = 1) {
-  for (let index = 0; index < count; index += 1) {
+  const effectiveCount = isPerformanceModeWorld(world) ? Math.max(1, Math.ceil(count * 0.35)) : count;
+
+  for (let index = 0; index < effectiveCount; index += 1) {
     world.particles.push({
       id: world.nextParticleId,
       x: x + randomBetween(-10, 10),
@@ -1643,7 +1744,7 @@ function addPaperParticles(world: World, x: number, y: number, color: string, co
     world.nextParticleId += 1;
   }
 
-  const maxParticles = isMobileWorld(world) ? 22 : particleLimit;
+  const maxParticles = isPerformanceModeWorld(world) ? particleLimitPerformance : particleLimit;
   if (world.particles.length > maxParticles) {
     world.particles.splice(0, world.particles.length - maxParticles);
   }
@@ -1719,8 +1820,12 @@ function finishCountdownWorld(world: World) {
 }
 
 function updatePlatforms(world: World, deltaSeconds: number) {
+  const movementMinY = world.cameraY - 220;
+  const movementMaxY = world.cameraY + world.height + 560;
+
   for (const platform of world.platforms) {
     if (platform.state !== "solid") continue;
+    if (platform.y < movementMinY || platform.y > movementMaxY) continue;
 
     if (platform.movementKind !== "static") {
       const age = Math.max(0, world.time - platform.moveStartedAt);
@@ -1759,12 +1864,22 @@ function updatePlatforms(world: World, deltaSeconds: number) {
     }
   }
 
-  world.platforms = world.platforms.filter((platform) => {
-    if (platform.y <= world.cameraY - 180) return false;
-    if (platform.y > world.cameraY + world.height + 980) return false;
-    if (platform.state === "breaking" && platform.breakStartedAt !== undefined && world.time - platform.breakStartedAt > 0.62) return false;
-    return true;
-  });
+  let writeIndex = 0;
+  const minY = world.cameraY - 180;
+  const maxY = world.cameraY + world.height + 980;
+  for (let index = 0; index < world.platforms.length; index += 1) {
+    const platform = world.platforms[index];
+    const keep =
+      platform.y > minY &&
+      platform.y <= maxY &&
+      !(platform.state === "breaking" && platform.breakStartedAt !== undefined && world.time - platform.breakStartedAt > 0.62);
+
+    if (!keep) continue;
+
+    world.platforms[writeIndex] = platform;
+    writeIndex += 1;
+  }
+  world.platforms.length = writeIndex;
 }
 
 function convertAbovePlayerPlatformsToPanicRed(world: World) {
@@ -1831,12 +1946,17 @@ function updateCollectibles(world: World, playAudioCue?: (cue: GameAudioCue) => 
     }
   }
 
-  world.collectibles = world.collectibles.filter((collectible) => {
-    if (collectible.collected) return false;
-    if (collectible.y <= world.cameraY - 180) return false;
-    if (collectible.y > world.cameraY + world.height + 980) return false;
-    return true;
-  });
+  let writeIndex = 0;
+  const minY = world.cameraY - 180;
+  const maxY = world.cameraY + world.height + 980;
+  for (let index = 0; index < world.collectibles.length; index += 1) {
+    const collectible = world.collectibles[index];
+    if (collectible.collected || collectible.y <= minY || collectible.y > maxY) continue;
+
+    world.collectibles[writeIndex] = collectible;
+    writeIndex += 1;
+  }
+  world.collectibles.length = writeIndex;
 }
 
 function triggerIntoxication(world: World, x: number, y: number) {
@@ -2656,6 +2776,7 @@ function drawSpaceCartelBackground(context: CanvasRenderingContext2D, world: Wor
 }
 
 function drawMarketCapMarkers(context: CanvasRenderingContext2D, world: World) {
+  const performanceMode = isPerformanceModeWorld(world);
   const displayMcap = getDisplayMcap(world);
   const range = getBiomeRangeForMcap(displayMcap);
   const markerRange = Number.isFinite(range.max) ? Math.max(1, range.max - range.min) : Math.max(1, displayMcap - range.min + 69_000_000_000);
@@ -2672,8 +2793,9 @@ function drawMarketCapMarkers(context: CanvasRenderingContext2D, world: World) {
 
     const label = formatMarkerScore(marker);
     const isMajor = marker === range.min || marker === range.max || marker >= 1_000_000_000;
+    if (performanceMode && !isMajor) continue;
 
-    context.globalAlpha = isMajor ? 0.76 : 0.48;
+    context.globalAlpha = performanceMode ? 0.62 : isMajor ? 0.76 : 0.48;
     context.strokeStyle = "#130e0c";
     context.lineWidth = 4;
     context.beginPath();
@@ -2726,12 +2848,7 @@ function drawPosterBackgroundImage(
     return;
   }
 
-  const overdraw = Math.max(96, height * 0.18);
-  const scale = Math.max(width / image.naturalWidth, (height + overdraw) / image.naturalHeight);
-  const drawWidth = image.naturalWidth * scale;
-  const drawHeight = image.naturalHeight * scale;
-  const x = (width - drawWidth) / 2;
-  const extraHeight = Math.max(0, drawHeight - height);
+  const { drawWidth, drawHeight, x, extraHeight } = getPosterDrawParams(image, width, height);
   const localProgress = getBiomeLocalProgress(getBiomeProgress(world), background);
   const parallax = backgroundParallax[background];
   const drift = clamp(localProgress * extraHeight * 0.78 + world.cameraY * parallax, 0, extraHeight * 0.82);
@@ -2878,17 +2995,20 @@ function drawTransitionOverlay(
 ) {
   if (!mix.next || !mix.message || mix.alpha <= 0 || mix.alpha >= 1) return;
 
+  const performanceMode = isPerformanceModeWorld(world);
   const pulse = Math.sin(mix.alpha * Math.PI);
   const textAlpha = clamp(pulse * 1.25, 0, 1);
 
-  context.save();
-  context.globalAlpha = 0.2 * pulse;
-  context.fillStyle = "#050403";
-  context.fillRect(0, 0, world.width, world.height);
-  context.restore();
+  if (!performanceMode) {
+    context.save();
+    context.globalAlpha = 0.2 * pulse;
+    context.fillStyle = "#050403";
+    context.fillRect(0, 0, world.width, world.height);
+    context.restore();
 
-  drawTornTransitionBand(context, world, true, 0.46 * pulse);
-  drawTornTransitionBand(context, world, false, 0.36 * pulse);
+    drawTornTransitionBand(context, world, true, 0.46 * pulse);
+    drawTornTransitionBand(context, world, false, 0.36 * pulse);
+  }
 
   context.save();
   context.globalAlpha = textAlpha;
@@ -2907,33 +3027,37 @@ function drawTransitionOverlay(
 }
 
 function drawBackground(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets) {
+  const performanceMode = isPerformanceModeWorld(world);
   const biomeProgress = getBiomeProgress(world);
   const mix = getBackgroundMix(biomeProgress);
-  const fallbackColors = Object.fromEntries(biomeDefinitions.map((biome) => [biome.key, biome.fallback])) as Record<BackgroundKey, string>;
 
-  drawBiomeBackgroundImage(context, world, mix.current, assets.backgrounds[mix.current], fallbackColors[mix.current], 1);
+  drawBiomeBackgroundImage(context, world, mix.current, assets.backgrounds[mix.current], backgroundFallbackColors[mix.current], 1);
 
-  if (mix.next && mix.alpha > 0) {
-    drawBiomeBackgroundImage(context, world, mix.next, assets.backgrounds[mix.next], fallbackColors[mix.next], mix.alpha);
+  if (mix.next && mix.alpha > (performanceMode ? 0.06 : 0)) {
+    drawBiomeBackgroundImage(context, world, mix.next, assets.backgrounds[mix.next], backgroundFallbackColors[mix.next], mix.alpha);
   }
 
   drawTransitionOverlay(context, world, mix);
 
-  context.save();
-  context.globalAlpha = 0.14;
-  context.strokeStyle = "#f4e4b2";
-  context.lineWidth = 1;
-  const gridOffset = ((world.cameraY * 0.08) % 48 + 48) % 48;
-  for (let y = gridOffset; y < world.height; y += 48) {
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(world.width, y);
-    context.stroke();
+  if (!performanceMode) {
+    context.save();
+    context.globalAlpha = 0.14;
+    context.strokeStyle = "#f4e4b2";
+    context.lineWidth = 1;
+    const gridOffset = ((world.cameraY * 0.08) % 48 + 48) % 48;
+    for (let y = gridOffset; y < world.height; y += 48) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(world.width, y);
+      context.stroke();
+    }
+    context.restore();
   }
-  context.restore();
 
   drawMarketCapMarkers(context, world);
-  drawPaperScratches(context, world);
+  if (!performanceMode) {
+    drawPaperScratches(context, world);
+  }
   drawPixelText(context, getStage(biomeProgress), world.width / 2, 28, 13, "#f4e4b2");
 }
 
@@ -2943,7 +3067,8 @@ function drawMoneyPrinterSparkles(context: CanvasRenderingContext2D, world: Worl
   context.save();
   context.fillStyle = "#e4b745";
 
-  for (let index = 0; index < 5; index += 1) {
+  const sparkleCount = isPerformanceModeWorld(world) ? 2 : 5;
+  for (let index = 0; index < sparkleCount; index += 1) {
     const phase = world.time * 5.8 + platform.phase + index * 1.7;
     const x = platform.width * (0.2 + index * 0.15) + Math.sin(phase) * 4;
     const y = -18 - Math.cos(phase * 0.8) * 8 - (index % 2) * 5;
@@ -2980,7 +3105,8 @@ function drawPlatformParticles(context: CanvasRenderingContext2D, world: World, 
   context.save();
   context.fillStyle = color;
 
-  for (let index = 0; index < count; index += 1) {
+  const particleCount = isPerformanceModeWorld(world) ? Math.min(1, count) : count;
+  for (let index = 0; index < particleCount; index += 1) {
     const phase = world.time * 7 + platform.phase + index * 1.9;
     const x = platform.width * (0.18 + index / Math.max(1, count) * 0.68) + Math.sin(phase) * 3;
     const y = -10 - Math.cos(phase * 0.8) * 5 - (index % 2) * 4;
@@ -3264,7 +3390,13 @@ function drawMumuPlaceholder(context: CanvasRenderingContext2D, mumu: MumuObstac
   context.fillRect(8, -4, 6, 6);
 }
 
-function drawSingleMumu(context: CanvasRenderingContext2D, world: World, image: HTMLImageElement | null, mumu: MumuObstacle) {
+function drawSingleMumu(
+  context: CanvasRenderingContext2D,
+  world: World,
+  image: HTMLImageElement | null,
+  mumu: MumuObstacle,
+  performanceMode = false,
+) {
   const y = screenY(world, mumu.y);
 
   if (mumu.state === "warning") {
@@ -3296,7 +3428,8 @@ function drawSingleMumu(context: CanvasRenderingContext2D, world: World, image: 
 
   const trailDirection = mumu.vx < 0 ? -1 : 1;
   const speedAlpha = clamp(Math.abs(mumu.vx) / 760, 0.22, mumu.variant === "red" ? 0.68 : 0.52);
-  for (let index = 3; index >= 1; index -= 1) {
+  const trailCount = performanceMode ? 1 : 3;
+  for (let index = trailCount; index >= 1; index -= 1) {
     context.save();
     context.globalAlpha = speedAlpha * ((mumu.variant === "red" ? 0.24 : 0.16) / index);
     context.translate(-trailDirection * index * 18, Math.sin(world.time * 14 + index) * 2);
@@ -3335,12 +3468,15 @@ function drawMumu(
   image: HTMLImageElement | null,
   evilImage: HTMLImageElement | null,
 ) {
+  const performanceMode = isPerformanceModeWorld(world);
+
   if (world.mumu) {
     drawSingleMumu(
       context,
       world,
       world.mumu.variant === "red" ? evilImage ?? image : image,
       world.mumu,
+      performanceMode,
     );
   }
 
@@ -3350,6 +3486,7 @@ function drawMumu(
       world,
       world.mumu2.variant === "red" ? evilImage ?? image : image,
       world.mumu2,
+      performanceMode,
     );
   }
 }
@@ -3392,33 +3529,37 @@ function drawPaperFlame(context: CanvasRenderingContext2D, x: number, y: number,
 function drawOnFireCanvasEffects(context: CanvasRenderingContext2D, world: World) {
   if (!isOnFire(world)) return;
 
+  const performanceMode = isPerformanceModeWorld(world);
   const remaining = clamp((world.onFireUntil - world.time) / onFireDuration, 0, 1);
   const pulse = 0.88 + Math.sin(world.time * 12) * 0.12;
 
   context.save();
-  context.globalAlpha = 0.62 + remaining * 0.18;
-  for (let index = 0; index < 7; index += 1) {
-    const y = world.height - 14 - ((index * world.height) / 6.4 + world.time * 74) % (world.height + 60);
+  context.globalAlpha = performanceMode ? 0.46 + remaining * 0.12 : 0.62 + remaining * 0.18;
+  const flameCount = performanceMode ? 3 : 7;
+  for (let index = 0; index < flameCount; index += 1) {
+    const y = world.height - 14 - ((index * world.height) / Math.max(1, flameCount - 0.6) + world.time * 74) % (world.height + 60);
     const scale = (0.8 + (index % 3) * 0.14) * pulse;
     drawPaperFlame(context, 14, y, scale, world.time * 8.8 + index);
     drawPaperFlame(context, world.width - 14, y + 18, scale, world.time * 9.2 + index * 1.3);
   }
 
-  context.globalAlpha = 0.18;
-  context.strokeStyle = "#e4b745";
-  context.lineWidth = 2;
-  for (let index = 0; index < 5; index += 1) {
-    const y = (world.height + index * 97 - (world.time * 130) % (world.height + 120)) % (world.height + 120) - 60;
-    context.beginPath();
-    context.moveTo(48 + index * 17, y);
-    context.lineTo(22 + index * 10, y + 58);
-    context.moveTo(world.width - 48 - index * 17, y + 18);
-    context.lineTo(world.width - 22 - index * 10, y + 76);
-    context.stroke();
+  if (!performanceMode) {
+    context.globalAlpha = 0.18;
+    context.strokeStyle = "#e4b745";
+    context.lineWidth = 2;
+    for (let index = 0; index < 5; index += 1) {
+      const y = (world.height + index * 97 - (world.time * 130) % (world.height + 120)) % (world.height + 120) - 60;
+      context.beginPath();
+      context.moveTo(48 + index * 17, y);
+      context.lineTo(22 + index * 10, y + 58);
+      context.moveTo(world.width - 48 - index * 17, y + 18);
+      context.lineTo(world.width - 22 - index * 10, y + 76);
+      context.stroke();
+    }
   }
 
   context.globalAlpha = 0.92;
-  drawPixelText(context, "BOBOCLAAAAAT MODE", world.width / 2, world.height * 0.22, 30, "#e4b745");
+  drawPixelText(context, "BOBOCLAAAAAT MODE", world.width / 2, world.height * 0.22, performanceMode ? 22 : 30, "#e4b745");
   context.restore();
 }
 
@@ -3451,6 +3592,7 @@ function drawMarketCrashCanvasEffects(context: CanvasRenderingContext2D, world: 
 
 function drawPlayer(context: CanvasRenderingContext2D, world: World, playerImage: HTMLImageElement | null) {
   const { player } = world;
+  const performanceMode = isPerformanceModeWorld(world);
   const x = player.x;
   const y = screenY(world, player.y);
   const tilt = clamp(player.vx / 900, -0.18, 0.18);
@@ -3464,11 +3606,16 @@ function drawPlayer(context: CanvasRenderingContext2D, world: World, playerImage
   context.save();
   context.translate(x, y + player.height / 2 + 8);
   context.scale(1, 0.34);
-  const shadowGradient = context.createRadialGradient(0, 0, 2, 0, 0, player.width * 0.78 * airScale);
-  shadowGradient.addColorStop(0, "rgba(0, 0, 0, 0.26)");
-  shadowGradient.addColorStop(0.72, "rgba(0, 0, 0, 0.12)");
-  shadowGradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-  context.fillStyle = shadowGradient;
+  if (performanceMode) {
+    context.globalAlpha = 0.18 * airScale;
+    context.fillStyle = "#000000";
+  } else {
+    const shadowGradient = context.createRadialGradient(0, 0, 2, 0, 0, player.width * 0.78 * airScale);
+    shadowGradient.addColorStop(0, "rgba(0, 0, 0, 0.26)");
+    shadowGradient.addColorStop(0.72, "rgba(0, 0, 0, 0.12)");
+    shadowGradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+    context.fillStyle = shadowGradient;
+  }
   context.beginPath();
   context.ellipse(0, 0, player.width * 0.86 * airScale, 18 * airScale, 0, 0, Math.PI * 2);
   context.fill();
@@ -3481,7 +3628,8 @@ function drawPlayer(context: CanvasRenderingContext2D, world: World, playerImage
 
   if (playerOnFire) {
     context.globalAlpha = 0.7;
-    for (let index = 0; index < 3; index += 1) {
+    const trailCount = performanceMode ? 1 : 3;
+    for (let index = 0; index < trailCount; index += 1) {
       const trailY = player.height / 2 + 11 + index * 13;
       const drift = Math.sin(world.time * 13 + index * 1.7) * 8;
       drawPaperFlame(context, drift, trailY, 0.22 - index * 0.035, world.time * 12 + index);
@@ -3489,7 +3637,9 @@ function drawPlayer(context: CanvasRenderingContext2D, world: World, playerImage
     context.globalAlpha = 1;
     drawPaperFlame(context, -24, -9, 0.58, world.time * 10);
     drawPaperFlame(context, 24, -11, 0.58, world.time * 10.5 + 1.7);
-    drawPaperFlame(context, 0, -31, 0.5, world.time * 11 + 0.8);
+    if (!performanceMode) {
+      drawPaperFlame(context, 0, -31, 0.5, world.time * 11 + 0.8);
+    }
   }
 
   if (flameSize > 5) {
@@ -3501,7 +3651,8 @@ function drawPlayer(context: CanvasRenderingContext2D, world: World, playerImage
 
   if (isJetpacking) {
     context.fillStyle = "#f4e4b2";
-    for (let index = 0; index < 4; index += 1) {
+    const sparkCount = performanceMode ? 2 : 4;
+    for (let index = 0; index < sparkCount; index += 1) {
       const drift = Math.sin(world.time * 18 + index) * 7;
       context.fillRect(drift - 2, player.height / 2 + 18 + index * 13, 4, 7);
     }
@@ -3531,6 +3682,7 @@ function drawFloatingFeedback(context: CanvasRenderingContext2D, world: World) {
     const age = world.time - feedback.createdAt;
     const alpha = clamp(1 - age / feedbackLifetime, 0, 1);
     const y = screenY(world, feedback.y) - age * 42;
+    if (y < -24 || y > world.height + 24) continue;
 
     context.globalAlpha = alpha;
     context.fillStyle = "#130e0c";
@@ -3561,7 +3713,7 @@ function drawGameParticles(context: CanvasRenderingContext2D, world: World) {
 }
 
 function drawWorld(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, selectedHead: HeadKey) {
-  const lowFx = world.width <= 760;
+  const lowFx = isPerformanceModeWorld(world);
   context.clearRect(0, 0, world.width, world.height);
 
   context.save();
@@ -3569,8 +3721,9 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
     context.translate(0, world.cameraKick);
   }
   if (world.shakePower > 0.1) {
-    const shakeX = (Math.random() * 2 - 1) * world.shakePower;
-    const shakeY = (Math.random() * 2 - 1) * world.shakePower;
+    const shakeScale = lowFx ? 0.58 : 1;
+    const shakeX = (Math.random() * 2 - 1) * world.shakePower * shakeScale;
+    const shakeY = (Math.random() * 2 - 1) * world.shakePower * shakeScale;
     context.translate(shakeX, shakeY);
   }
 
@@ -3594,9 +3747,7 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
   drawCollectibles(context, world, assets);
   drawHoneyLife(context, world, assets.honeyLife ?? assets.platforms["honey-jar"]);
   drawMumu(context, world, assets.mumu, assets.evilMumu);
-  if (!lowFx) {
-    drawOnFireCanvasEffects(context, world);
-  }
+  drawOnFireCanvasEffects(context, world);
   drawGameParticles(context, world);
   drawPlayer(context, world, resolvePlayerImage(assets, selectedHead));
   drawFloatingFeedback(context, world);
@@ -3614,7 +3765,7 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
 
   if (world.flashPower > 0.01) {
     context.save();
-    context.globalAlpha = clamp(world.flashPower, 0, 0.55);
+    context.globalAlpha = clamp(world.flashPower, 0, lowFx ? 0.34 : 0.55);
     context.fillStyle = "#f4e4b2";
     context.fillRect(0, 0, world.width, world.height);
     context.restore();
@@ -3943,6 +4094,7 @@ export default function BobroToTheMoon({
   const activePointerIdRef = useRef<number | null>(null);
   const worldRef = useRef<World>(createWorld());
   const hudRef = useRef<HudState>(initialHudState);
+  const lastHudSyncTimeRef = useRef(0);
   const activeRunSessionRef = useRef<ActiveRunSession | null>(null);
   const autoStartGuestRunRef = useRef(false);
   const bestTodayRef = useRef(0);
@@ -3976,8 +4128,13 @@ export default function BobroToTheMoon({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [hud, setHud] = useState<HudState>(initialHudState);
 
-  const syncHud = useCallback((_force = false) => {
+  const syncHud = useCallback((force = false) => {
     const world = worldRef.current;
+    const now =
+      typeof window !== "undefined" && typeof window.performance !== "undefined" ? window.performance.now() : Date.now();
+    const hudSyncInterval = isPerformanceModeWorld(world) ? hudSyncIntervalMsMobile : hudSyncIntervalMsDesktop;
+    if (!force && now - lastHudSyncTimeRef.current < hudSyncInterval) return;
+
     const displayScore = getDisplayScore(world);
     const statusLabels = [
       ...(isOnFire(world) ? ["BOBOCLAAAAAT MODE"] : []),
@@ -4000,6 +4157,7 @@ export default function BobroToTheMoon({
 
     if (areHudStatesEqual(hudRef.current, nextHud)) return;
 
+    lastHudSyncTimeRef.current = now;
     hudRef.current = nextHud;
     setHud(nextHud);
   }, []);
@@ -4596,7 +4754,7 @@ ${shareUrl}`;
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
-    const context = canvas.getContext("2d");
+    const context = canvas.getContext("2d", { alpha: false });
     if (!context) return undefined;
 
     let activeFrameMs = canvasFrameMsDesktop;
@@ -4620,7 +4778,7 @@ ${shareUrl}`;
       }
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      resizeWorld(worldRef.current, nextWidth, nextHeight);
+      resizeWorld(worldRef.current, nextWidth, nextHeight, performanceProfile.performanceMode);
       drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
       syncHud(true);
     };
@@ -4907,7 +5065,7 @@ ${shareUrl}`;
                     onClick={modeChosen ? startGame : startGuestRunFromMenu}
                     disabled={modeChosen && !assetsLoaded}
                   >
-                    {modeChosen && !assetsLoaded ? "LOADING ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
+                    {modeChosen && !assetsLoaded ? "LOADING GAME ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
                   </button>
                 </div>
 
@@ -5035,7 +5193,7 @@ ${shareUrl}`;
                 onClick={hud.status === "paused" ? togglePause : startGame}
                 disabled={!assetsLoaded && hud.status !== "paused"}
               >
-                {!assetsLoaded ? "LOADING ASSETS" : hud.status === "dead" ? "RESTART" : hud.status === "paused" ? "RESUME" : "START RUN"}
+                {!assetsLoaded ? "LOADING GAME ASSETS" : hud.status === "dead" ? "RESTART" : hud.status === "paused" ? "RESUME" : "START RUN"}
               </button>
             ) : null}
           </div>

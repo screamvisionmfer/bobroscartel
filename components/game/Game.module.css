@@ -374,6 +374,7 @@
   min-height: 0;
   flex: 1;
   overflow: hidden;
+  contain: layout paint;
   border: 3px solid rgba(0, 0, 0, 0.76);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.28);
@@ -1358,6 +1359,12 @@
     display: none;
   }
 
+  .gameCloud {
+    filter: none;
+    animation: none;
+    opacity: 0.58;
+  }
+
   .backLink {
     grid-column: auto;
     justify-self: end;
@@ -1401,6 +1408,10 @@
   .gameCanvas {
     height: clamp(450px, 72svh, 650px);
     min-height: 0;
+  }
+
+  .canvasWrap::after {
+    display: none;
   }
 
   .soundToggle {
