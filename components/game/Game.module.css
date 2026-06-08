@@ -4766,6 +4766,224 @@
     #a22ccf;
 }
 
+/* Absolute final challenge intro positioning. Keep this after all overlay overrides. */
+.gamePage .gameOverlay:has(.challengeIntro) {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center !important;
+  align-content: center !important;
+  gap: 0.7rem;
+  min-height: 100%;
+  padding: clamp(1rem, 3vh, 2.2rem) 0.8rem !important;
+}
+
+.gamePage .gameOverlay:has(.challengeIntro) > span,
+.gamePage .gameOverlay:has(.challengeIntro) > h2,
+.gamePage .gameOverlay:has(.challengeIntro) > p,
+.gamePage .gameOverlay:has(.challengeIntro) .challengeIntro {
+  flex: 0 0 auto;
+}
+
+.gamePage .gameOverlay:has(.challengeIntro) > h2 {
+  margin: 0;
+  transform: translateY(0);
+}
+
+.gamePage .gameOverlay:has(.challengeIntro) .challengeIntro {
+  margin: 0;
+  transform: translateY(0);
+}
+
+@media (min-width: 981px) {
+  .gamePage .gameOverlay:has(.challengeIntro) {
+    transform: translateY(5vh);
+  }
+}
+
+@media (max-width: 760px) {
+  .gamePage .gameOverlay:has(.challengeIntro) {
+    transform: none;
+    gap: 0.5rem;
+  }
+}
+
+.challengeTargetHud {
+  position: absolute;
+  top: 0.7rem;
+  left: 50%;
+  z-index: 4;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+  min-height: 2.3rem;
+  padding: 0.34rem 0.82rem;
+  border: 1px solid rgba(179, 87, 255, 0.5);
+  border-radius: 999px;
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(7, 7, 10, 0.86);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+}
+
+.challengeTargetHud span {
+  color: #b764ff;
+  font-size: 0.58rem;
+}
+
+.challengeTargetHud strong {
+  color: #8dde3e;
+  font-size: 0.78rem;
+}
+
+.challengeIntro,
+.challengeResultBox {
+  width: min(34rem, 92%);
+  margin: 0.65rem auto 0;
+  padding: 1rem;
+  border: 1px solid rgba(179, 87, 255, 0.34);
+  border-radius: 18px;
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(179, 87, 255, 0.12), rgba(141, 222, 62, 0.045)),
+    rgba(4, 5, 7, 0.78);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.challengeIntro {
+  text-align: center;
+}
+
+.challengeIntro > span,
+.challengeResultBox > strong {
+  display: block;
+  color: #8dde3e;
+  font-size: 0.7rem;
+}
+
+.challengeIntro > strong {
+  display: block;
+  margin-top: 0.3rem;
+  color: #f8f7ef;
+  font-size: clamp(1.3rem, 4vw, 2.2rem);
+  text-shadow: 3px 4px 0 #000;
+}
+
+.challengeIntro p {
+  margin: 0.6rem 0 0.2rem;
+  color: #ffd335;
+  font-size: 1rem;
+}
+
+.challengeIntro small,
+.challengeResultBox small {
+  color: rgba(248, 247, 239, 0.76);
+}
+
+.challengeIntroActions {
+  display: grid;
+  grid-template-columns: 1fr 0.62fr;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.challengeResultBox {
+  text-align: center;
+}
+
+.challengeResultBox > strong {
+  margin-bottom: 0.32rem;
+  color: #ffd335;
+}
+
+@media (max-width: 760px) {
+  .challengeTargetHud {
+    top: 0.55rem;
+    min-height: 2rem;
+    padding: 0.28rem 0.62rem;
+  }
+
+  .challengeTargetHud span {
+    font-size: 0.5rem;
+  }
+
+  .challengeTargetHud strong {
+    font-size: 0.66rem;
+  }
+
+  .challengeIntro {
+    width: min(20rem, 92%);
+    padding: 0.75rem;
+  }
+
+  .challengeIntroActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Final desktop result action layout: challenge buttons should not orphan-wrap. */
+@media (min-width: 981px) {
+  .deathOverlay .deathActions {
+    width: min(100%, 50rem);
+    max-width: 50rem;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.55rem;
+    justify-self: center;
+    align-items: stretch;
+  }
+
+  .deathOverlay .deathActions .startButton {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.48rem 0.58rem;
+    border-radius: 16px;
+    font-size: clamp(0.48rem, 0.58vw, 0.66rem);
+    line-height: 1.05;
+    text-align: center;
+    white-space: normal;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 980px) {
+  .deathOverlay .deathActions {
+    width: min(100%, 36rem);
+    max-width: 36rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Challenge intro should feel centered like a game screen, not glued to the top. */
+.gameOverlay:has(.challengeIntro) {
+  align-content: center;
+  padding-top: clamp(3rem, 9vh, 7rem);
+  padding-bottom: clamp(1.4rem, 5vh, 4rem);
+}
+
+.gameOverlay:has(.challengeIntro) > h2 {
+  margin-top: 0;
+}
+
+.gameOverlay:has(.challengeIntro) .challengeIntro {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .gameOverlay:has(.challengeIntro) {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
 /* Last-pass mobile gameplay polish. Keep this after the older responsive rules. */
 @media (max-width: 980px) {
   .gamePage:has(.lobbyCabinet) .skinButton span {

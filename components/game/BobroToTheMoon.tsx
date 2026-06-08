@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import styles from "./Game.module.css";
+import type { ChallengeRunData, GhostPoint } from "./challengeTypes";
 import { useGameAudio, type GameAudioCue, type GameMusicMode } from "./useGameAudio";
 
 const playerWallet = "DEMO_BOBRO...PLAY";
@@ -16,6 +17,8 @@ const canvasFrameMsMobile = 1000 / 40;
 const canvasFrameMsAndroid = 1000 / 36;
 const canvasIdleFrameMsDesktop = 1000 / 12;
 const canvasIdleFrameMsMobile = 1000 / 6;
+const ghostSampleIntervalSeconds = 0.18;
+const maxGhostSamples = 2200;
 const hudSyncIntervalMsDesktop = 110;
 const hudSyncIntervalMsMobile = 155;
 
@@ -461,6 +464,7 @@ type RunResult = {
   bestToday: number;
   honeyLivesCollected: number;
   livesUsed: number;
+  duration: number;
   unlockedSkinLabels: string[];
   saved: boolean;
   runId?: string;
@@ -3974,6 +3978,72 @@ function resolvePlayerImage(assets: LoadedAssets, selectedHead: HeadKey) {
   return assets.heads[selectedHead] ?? assets.fallbackHead;
 }
 
+function getGhostPointAt(points: GhostPoint[], elapsedSeconds: number) {
+  if (points.length === 0) return null;
+  if (elapsedSeconds <= points[0].t) return points[0];
+  const lastPoint = points[points.length - 1];
+  if (elapsedSeconds >= lastPoint.t) return lastPoint;
+
+  const approximateIndex = clamp(Math.floor(elapsedSeconds / ghostSampleIntervalSeconds), 0, points.length - 2);
+  let index = approximateIndex;
+
+  while (index > 0 && points[index].t > elapsedSeconds) {
+    index -= 1;
+  }
+
+  while (index < points.length - 2 && points[index + 1].t < elapsedSeconds) {
+    index += 1;
+  }
+
+  const current = points[index];
+  const next = points[index + 1] ?? current;
+  const span = Math.max(0.001, next.t - current.t);
+  const mix = clamp((elapsedSeconds - current.t) / span, 0, 1);
+
+  return {
+    t: elapsedSeconds,
+    x: current.x + (next.x - current.x) * mix,
+    y: current.y + (next.y - current.y) * mix,
+  };
+}
+
+function drawGhostRun(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, challengeRun: ChallengeRunData | null) {
+  if (!challengeRun || world.status !== "playing") return;
+
+  const ghost = getGhostPointAt(challengeRun.ghostData, Math.max(0, world.time - countdownDuration));
+  if (!ghost) return;
+
+  const ghostY = screenY(world, ghost.y);
+  if (ghostY < -80 || ghostY > world.height + 80) return;
+
+  const skinKey = isHeadKey(challengeRun.selectedSkin) ? challengeRun.selectedSkin : "bobro-head";
+  const ghostImage = resolvePlayerImage(assets, skinKey);
+
+  context.save();
+  context.globalAlpha = 0.36;
+  context.translate(ghost.x, ghostY);
+  context.rotate(Math.sin(world.time * 2.6) * 0.04);
+  context.fillStyle = "rgba(179, 87, 255, 0.22)";
+  context.beginPath();
+  context.ellipse(0, 2, 38, 35, 0, 0, Math.PI * 2);
+  context.fill();
+
+  if (ghostImage?.complete && ghostImage.naturalWidth > 0) {
+    context.imageSmoothingEnabled = true;
+    context.drawImage(ghostImage, -31, -35, 62, 62);
+  } else {
+    drawFallbackPlayer(context, world.player);
+  }
+
+  context.globalAlpha = 0.72;
+  context.font = "700 10px Courier New, monospace";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = "#f8f7ef";
+  context.fillText(challengeRun.creatorName || "GHOST", 0, -47);
+  context.restore();
+}
+
 function drawFloatingFeedback(context: CanvasRenderingContext2D, world: World) {
   context.save();
   context.font = "700 15px Courier New, monospace";
@@ -4014,7 +4084,7 @@ function drawGameParticles(context: CanvasRenderingContext2D, world: World) {
   context.restore();
 }
 
-function drawWorld(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, selectedHead: HeadKey) {
+function drawWorld(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets, selectedHead: HeadKey, challengeRun: ChallengeRunData | null = null) {
   const lowFx = isPerformanceModeWorld(world);
   context.clearRect(0, 0, world.width, world.height);
 
@@ -4051,6 +4121,7 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
   drawMumu(context, world, assets.mumu, assets.evilMumu);
   drawOnFireCanvasEffects(context, world);
   drawGameParticles(context, world);
+  drawGhostRun(context, world, assets, challengeRun);
   drawPlayer(context, world, resolvePlayerImage(assets, selectedHead));
   drawFloatingFeedback(context, world);
   context.restore();
@@ -4377,6 +4448,27 @@ function getGameShareUrl() {
   return fallbackGameShareUrl;
 }
 
+function getAbsoluteChallengeUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (configuredSiteUrl) return `${configuredSiteUrl}${path.startsWith("/") ? path : `/${path}`}`;
+  if (typeof window !== "undefined") return new URL(path, window.location.origin).href;
+
+  return `${fallbackGameShareUrl.replace(/\/game$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function getChallengeShareText({
+  creatorName,
+  scoreText,
+  challengeUrl,
+}: {
+  creatorName: string;
+  scoreText: string;
+  challengeUrl: string;
+}) {
+  const name = creatorName.trim() || defaultPlayerName;
+  return `I made a Bobro To The Moon ghost challenge 👻\n\nRace ${name}'s run and beat the target.\n\n🎯 Target: ${scoreText} MCAP\n\nPlay the challenge:\n${challengeUrl}`;
+}
+
 async function checkHolder(wallet: string) {
   const response = await fetch(`/api/check-holder?wallet=${encodeURIComponent(wallet)}`, { cache: "no-store" });
 
@@ -4392,11 +4484,13 @@ export default function BobroToTheMoon({
   onAccessChange,
   onStatusChange,
   onOpenLeaderboard,
+  challengeRun = null,
 }: {
   onScoreSubmitted: () => void;
   onAccessChange?: (access: { mode: GameMode; wallet?: string }) => void;
   onStatusChange?: (status: WorldStatus | "loading") => void;
   onOpenLeaderboard?: () => void;
+  challengeRun?: ChallengeRunData | null;
 }) {
   const {
     muted: audioMuted,
@@ -4431,6 +4525,9 @@ export default function BobroToTheMoon({
   const activeRunSessionRef = useRef<ActiveRunSession | null>(null);
   const runSessionRequestInFlightRef = useRef(false);
   const runNonceRef = useRef(0);
+  const ghostSamplesRef = useRef<GhostPoint[]>([]);
+  const lastGhostSampleAtRef = useRef(-999);
+  const challengeTargetBeatRef = useRef(false);
   const autoStartGuestRunRef = useRef(false);
   const autoSavedRunIdsRef = useRef<Set<string>>(new Set());
   const countdownWatchdogTimeoutRef = useRef<number | undefined>(undefined);
@@ -4466,6 +4563,8 @@ export default function BobroToTheMoon({
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isPreparingRun, setIsPreparingRun] = useState(false);
+  const [challengeStatus, setChallengeStatus] = useState<"idle" | "creating" | "created" | "error" | "copied">("idle");
+  const [createdChallenge, setCreatedChallenge] = useState<{ challengeId: string; challengeUrl: string } | null>(null);
   const [hud, setHud] = useState<HudState>(initialHudState);
 
   useEffect(() => {
@@ -4558,6 +4657,24 @@ export default function BobroToTheMoon({
   useEffect(() => {
     playAudioCueRef.current = playAudioCue;
   }, [playAudioCue]);
+
+  const recordGhostSample = useCallback((world: World) => {
+    if (world.status !== "playing") return;
+
+    const elapsed = Math.max(0, world.time - countdownDuration);
+    if (elapsed - lastGhostSampleAtRef.current < ghostSampleIntervalSeconds) return;
+
+    lastGhostSampleAtRef.current = elapsed;
+    const samples = ghostSamplesRef.current;
+
+    if (samples.length >= maxGhostSamples) return;
+
+    samples.push({
+      t: Math.round(elapsed * 1000) / 1000,
+      x: Math.round(world.player.x * 10) / 10,
+      y: Math.round(world.player.y * 10) / 10,
+    });
+  }, []);
 
   const loadProgressForMode = useCallback(
     (nextMode: GameMode, nextWallet = "") => {
@@ -4845,6 +4962,10 @@ export default function BobroToTheMoon({
       const isHolderRun = mode === "holder";
       const unlockedSkinLabels = isHolderRun ? getUnlocksBetween(bestUnlockScore, score).map((head) => head.label) : [];
 
+      if (challengeRun) {
+        pushArcadeEvent(world, score > challengeRun.score ? "TARGET BEATEN" : "CHALLENGE FAILED", 2.2);
+      }
+
       bestTodayRef.current = nextBestToday;
       window.localStorage.setItem(getBestScoreKey(mode, walletAddress), String(nextBestToday));
 
@@ -4867,6 +4988,7 @@ export default function BobroToTheMoon({
         bestToday: nextBestToday,
         honeyLivesCollected: world.honeyLivesCollected,
         livesUsed: world.livesUsed,
+        duration: Math.max(0, Math.round((world.time - countdownDuration) * 1000) / 1000),
         unlockedSkinLabels,
         saved: false,
         runId: activeRunSessionRef.current?.runId,
@@ -4877,7 +4999,7 @@ export default function BobroToTheMoon({
       setNameError("");
       syncHud(true);
     },
-    [bestUnlockScore, mode, selectedHead, syncHud, walletAddress],
+    [bestUnlockScore, challengeRun, mode, selectedHead, syncHud, walletAddress],
   );
 
   useEffect(() => {
@@ -5141,6 +5263,75 @@ ${shareUrl}`;
     downloadScoreCardImage(runResult, displayName, resolvePlayerImage(assetsRef.current, runResult.skinKey));
   }, [playerName, runResult]);
 
+  const createChallenge = useCallback(async () => {
+    if (!runResult || challengeStatus === "creating") return;
+
+    const displayName = getValidPlayerName(playerName) ?? defaultPlayerName;
+    const ghostData = ghostSamplesRef.current.slice(0, maxGhostSamples);
+
+    setPlayerName(displayName);
+    setNameError("");
+    setChallengeStatus("creating");
+
+    try {
+      const response = await fetch("/api/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName,
+          xHandle: normalizeXHandle(xHandle) || undefined,
+          wallet: walletAddress || undefined,
+          selectedSkin: runResult.skinKey,
+          score: runResult.score,
+          formattedMcap: formatMarketCap(runResult.score),
+          zone: runResult.stage,
+          duration: runResult.duration,
+          ghostData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to create challenge");
+      }
+
+      const challenge = (await response.json()) as { challengeId: string; challengeUrl: string };
+      setCreatedChallenge(challenge);
+      setChallengeStatus("created");
+    } catch {
+      setChallengeStatus("error");
+    }
+  }, [challengeStatus, playerName, runResult, walletAddress, xHandle]);
+
+  const copyChallengeLink = useCallback(async () => {
+    const path = createdChallenge?.challengeUrl ?? (challengeRun ? `/game/challenge/${challengeRun.challengeId}` : "");
+    if (!path) return;
+
+    try {
+      await navigator.clipboard.writeText(getAbsoluteChallengeUrl(path));
+      setChallengeStatus("copied");
+    } catch {
+      setChallengeStatus("error");
+    }
+  }, [challengeRun, createdChallenge]);
+
+  const shareChallenge = useCallback(() => {
+    const path = createdChallenge?.challengeUrl ?? (challengeRun ? `/game/challenge/${challengeRun.challengeId}` : "");
+    const result = runResult;
+    if (!path || !result) return;
+
+    const challengeUrl = getAbsoluteChallengeUrl(path);
+    const creatorName = challengeRun?.creatorName ?? getValidPlayerName(playerName) ?? defaultPlayerName;
+    const scoreText = challengeRun?.formattedMcap ?? formatMarketCap(result.score);
+    const tweetText = getChallengeShareText({ creatorName, scoreText, challengeUrl });
+
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank", "noopener,noreferrer");
+  }, [challengeRun, createdChallenge, playerName, runResult]);
+
+  const startChallengeRun = useCallback(() => {
+    autoStartGuestRunRef.current = true;
+    playAsGuest();
+  }, [playAsGuest]);
+
   const updatePlayerName = useCallback((value: string) => {
     if (hasUrlLikeText(value)) {
       setNameError("NO URLS ON THE BOUNTY BOARD");
@@ -5205,6 +5396,11 @@ ${shareUrl}`;
       }
     }
 
+    ghostSamplesRef.current = [];
+    lastGhostSampleAtRef.current = -999;
+    challengeTargetBeatRef.current = false;
+    setChallengeStatus("idle");
+    setCreatedChallenge(null);
     const currentWorld = worldRef.current;
     startMusic("normal");
     const nextWorld = createWorld(currentWorld.width, currentWorld.height, "countdown");
@@ -5443,7 +5639,7 @@ ${shareUrl}`;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       resizeWorld(worldRef.current, nextWidth, nextHeight, performanceProfile.performanceMode);
       try {
-        drawWorld(context, worldRef.current, assetsRef.current, selectedHeadRef.current);
+        drawWorld(context, worldRef.current, assetsRef.current, selectedHeadRef.current, challengeRun);
       } catch (error) {
         if (!canvasLoopErrorLogged) {
           canvasLoopErrorLogged = true;
@@ -5478,7 +5674,12 @@ ${shareUrl}`;
 
       try {
         updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCueRef.current);
-        drawWorld(context, world, assetsRef.current, selectedHeadRef.current);
+        recordGhostSample(world);
+        if (challengeRun && world.status === "playing" && !challengeTargetBeatRef.current && getDisplayScore(world) > challengeRun.score) {
+          challengeTargetBeatRef.current = true;
+          pushArcadeEvent(world, "TARGET BEATEN", 2.1);
+        }
+        drawWorld(context, world, assetsRef.current, selectedHeadRef.current, challengeRun);
       } catch (error) {
         if (!canvasLoopErrorLogged) {
           canvasLoopErrorLogged = true;
@@ -5509,7 +5710,7 @@ ${shareUrl}`;
       window.clearInterval(loopHeartbeat);
       resizeObserver?.disconnect();
     };
-  }, [assetsLoaded, syncHud]);
+  }, [assetsLoaded, challengeRun, recordGhostSample, syncHud]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -5588,6 +5789,8 @@ ${shareUrl}`;
 
   const selectedHeadOption = getHeadOption(selectedHead);
   const result = runResult;
+  const challengeWon = Boolean(challengeRun && result && result.score > challengeRun.score);
+  const isChallengeResult = Boolean(challengeRun && result);
   const resultBestText = result
     ? result.previousBestToday > 0
       ? result.score > result.previousBestToday
@@ -5709,6 +5912,13 @@ ${shareUrl}`;
           </div>
         ) : null}
 
+        {challengeRun && hud.status !== "ready" ? (
+          <div className={styles.challengeTargetHud} aria-label="Challenge target">
+            <span>TARGET</span>
+            <strong>{challengeRun.formattedMcap}</strong>
+          </div>
+        ) : null}
+
         {hud.status !== "playing" ? (
           <div className={`${styles.gameOverlay} ${hud.status === "dead" ? styles.deathOverlay : ""}`}>
             <span>
@@ -5724,12 +5934,18 @@ ${shareUrl}`;
             </span>
             <h2>
               {hud.status === "dead"
-                ? "RUN SUMMARY"
+                ? isChallengeResult
+                  ? challengeWon
+                    ? "YOU WON"
+                    : "YOU LOST"
+                  : "RUN SUMMARY"
                 : hud.status === "paused"
                   ? "HOLD"
                   : hud.status === "countdown"
                     ? hud.countdownText || "PUMP"
-                    : "BOBRO TO THE MOON"}
+                    : challengeRun
+                      ? "CHALLENGE RUN"
+                      : "BOBRO TO THE MOON"}
             </h2>
             <p>
               {hud.status === "dead"
@@ -5738,9 +5954,26 @@ ${shareUrl}`;
                   ? "ESC OR P TO RESUME."
                   : hud.status === "countdown"
                     ? "PUMP IS COMING."
-                    : "HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD."}
+                    : challengeRun
+                      ? "BEAT THE GHOST TARGET."
+                      : "HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD."}
             </p>
-            {hud.status === "ready" ? (
+            {hud.status === "ready" && challengeRun ? (
+              <div className={styles.challengeIntro} aria-label="Ghost challenge intro">
+                <span>CHALLENGE RUN</span>
+                <strong>{challengeRun.creatorName}</strong>
+                <p>Target: {challengeRun.formattedMcap} MCAP</p>
+                <small>Can you beat this ghost run?</small>
+                <div className={styles.challengeIntroActions}>
+                  <button className={`${styles.startButton} ${styles.primaryRunButton}`} type="button" onClick={startChallengeRun}>
+                    START CHALLENGE
+                  </button>
+                  <a className={`${styles.startButton} ${styles.pauseHomeButton}`} href="/game">
+                    BACK
+                  </a>
+                </div>
+              </div>
+            ) : hud.status === "ready" ? (
               <div className={styles.readyMenu} aria-label="BOBRO TO THE MOON start menu">
                 <div className={styles.menuSkinPanel}>
                   <div className={styles.skinSelector} aria-label="Choose your Bobro">
@@ -5860,6 +6093,12 @@ ${shareUrl}`;
                     <dt>BOBO MCAP</dt>
                     <dd>{formatMarketCap(result.score)}</dd>
                   </div>
+                  {challengeRun ? (
+                    <div>
+                      <dt>TARGET</dt>
+                      <dd>{challengeRun.formattedMcap}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>ZONE</dt>
                     <dd>{result.stage}</dd>
@@ -5877,7 +6116,14 @@ ${shareUrl}`;
                     <dd>{result.honeyLivesCollected} EXTRA / {result.livesUsed} SAVES</dd>
                   </div>
                 </dl>
-                {result.mode === "holder" ? (
+                {challengeRun ? (
+                  <div className={styles.challengeResultBox} aria-label="Challenge result">
+                    <strong>{challengeWon ? "CHALLENGE CLEARED" : "CHALLENGE FAILED"}</strong>
+                    <small>
+                      {challengeRun.creatorName} set the target at {challengeRun.formattedMcap}.
+                    </small>
+                  </div>
+                ) : result.mode === "holder" ? (
                   <div className={styles.profileEntryPanel} aria-label="Bounty board profile">
                     <label className={styles.nameEntry}>
                       <span>PLAYER NAME</span>
@@ -5941,8 +6187,8 @@ ${shareUrl}`;
                 )}
                 
                 {nameError ? <small className={styles.formError}>{nameError}</small> : null}
-                {runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
-                {result.mode === "holder" && result.leaderboardEligible ? (
+                {!challengeRun && runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
+                {!challengeRun && result.mode === "holder" && result.leaderboardEligible ? (
                   <small className={styles.guestNote}>Weekly leaderboard entries are reviewed before rewards are distributed.</small>
                 ) : null}
                 {result.unlockedSkinLabels.length > 0 ? (
@@ -5957,9 +6203,26 @@ ${shareUrl}`;
                 ) : null}
                 {saveStatus === "saved" || result.saved ? <small className={styles.saveConfirmation}>SCORE SAVED · NAME CAN BE UPDATED</small> : null}
                 {saveStatus === "error" ? <small className={styles.formError}>SAVE FAILED. TRY AGAIN.</small> : null}
+                {createdChallenge ? <small className={styles.saveConfirmation}>CHALLENGE READY</small> : null}
+                {challengeStatus === "error" ? <small className={styles.formError}>CHALLENGE FAILED. TRY AGAIN.</small> : null}
               </div>
             ) : null}
-            {hud.status === "dead" && result ? (
+            {hud.status === "dead" && result && challengeRun ? (
+              <div className={styles.deathActions}>
+                <button className={styles.startButton} type="button" onClick={shareChallenge}>
+                  SHARE RESULT
+                </button>
+                <button className={styles.startButton} type="button" onClick={() => void copyChallengeLink()}>
+                  {challengeStatus === "copied" ? "LINK COPIED" : "COPY CHALLENGE LINK"}
+                </button>
+                <button className={styles.startButton} type="button" onClick={startChallengeRun}>
+                  PLAY AGAIN
+                </button>
+                <a className={styles.startButton} href="/game">
+                  BACK TO NORMAL GAME
+                </a>
+              </div>
+            ) : hud.status === "dead" && result ? (
               <div className={styles.deathActions}>
                 <button className={styles.startButton} type="button" onClick={() => void saveRunToBountyBoard()} disabled={!canSaveRun || saveStatus === "saving"}>
                   {canSaveRun ? saveButtonLabel : "HOLDER WALLET REQUIRED"}
@@ -5970,6 +6233,20 @@ ${shareUrl}`;
                 <button className={styles.startButton} type="button" onClick={downloadScoreCard}>
                   DOWNLOAD SCORE CARD
                 </button>
+                {createdChallenge ? (
+                  <>
+                    <button className={styles.startButton} type="button" onClick={() => void copyChallengeLink()}>
+                      {challengeStatus === "copied" ? "LINK COPIED" : "COPY LINK"}
+                    </button>
+                    <button className={styles.startButton} type="button" onClick={shareChallenge}>
+                      SHARE CHALLENGE
+                    </button>
+                  </>
+                ) : (
+                  <button className={styles.startButton} type="button" onClick={() => void createChallenge()} disabled={challengeStatus === "creating"}>
+                    {challengeStatus === "creating" ? "CREATING..." : "CREATE CHALLENGE"}
+                  </button>
+                )}
                 <button className={styles.startButton} type="button" onClick={returnToStartScreen}>
                   RUN AGAIN
                 </button>

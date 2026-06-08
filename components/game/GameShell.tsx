@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ChallengeRunData } from "./challengeTypes";
 import BobroToTheMoon from "./BobroToTheMoon";
 import Leaderboard from "./Leaderboard";
 import styles from "./Game.module.css";
 
 type ShellGameStatus = "loading" | "ready" | "countdown" | "playing" | "paused" | "dead";
 
-export default function GameShell() {
+export default function GameShell({ challengeRun = null }: { challengeRun?: ChallengeRunData | null }) {
   const [leaderboardVersion, setLeaderboardVersion] = useState(0);
   const [holderWallet, setHolderWallet] = useState("");
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -50,6 +51,7 @@ export default function GameShell() {
           onAccessChange={(access) => setHolderWallet(access.mode === "holder" ? access.wallet ?? "" : "")}
           onStatusChange={setGameStatus}
           onOpenLeaderboard={() => setLeaderboardOpen(true)}
+          challengeRun={challengeRun}
         />
 
         <div className={styles.leaderboardSidebar}>{leaderboard}</div>
