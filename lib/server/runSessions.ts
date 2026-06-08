@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { allowedSkins, allowedZones, getUtcWeekId, maxScore, zoneMinimumScores } from "./gameConfig";
-import { getRedis } from "./redis";
+import { getRedis, withRedisTimeout } from "./redis";
 
 export type RunSession = {
   runId: string;
@@ -77,7 +77,7 @@ export async function createRunSession({
 
   // Production run sessions are durable across serverless instances, but still
   // short-lived. If this grows beyond the game, move to a real review DB.
-  await redis.set(runSessionKeys.session(runId), session, { ex: runSessionTtlSeconds });
+  await withRedisTimeout(redis.set(runSessionKeys.session(runId), session, { ex: runSessionTtlSeconds }));
 
   return session;
 }
@@ -101,13 +101,13 @@ export async function consumeRunSession({
     return consumeMemoryRunSession({ runId, wallet, selectedSkin, score, zone });
   }
 
-  const session = await redis.get<RunSession>(runSessionKeys.session(runId));
+  const session = await withRedisTimeout(redis.get<RunSession>(runSessionKeys.session(runId)));
 
   if (!session) {
     return { error: "Invalid run session" as const };
   }
 
-  const reserve = await redis.set(runSessionKeys.used(runId), "1", { nx: true, ex: runSessionTtlSeconds });
+  const reserve = await withRedisTimeout(redis.set(runSessionKeys.used(runId), "1", { nx: true, ex: runSessionTtlSeconds }));
 
   if (reserve !== "OK") {
     return { error: "Run session already used" as const };
@@ -179,7 +179,10 @@ function validateRunSession({
     return { error: "Run session expired" as const };
   }
 
-  if (session.wallet !== wallet || session.selectedSkin !== selectedSkin) {
+  // Guest runs start without a wallet so players can verify a holder wallet on
+  // the results screen and still submit that run. Holder re-check still happens
+  // in /api/score before a leaderboard entry is accepted.
+  if ((session.wallet && session.wallet !== wallet) || session.selectedSkin !== selectedSkin) {
     return { error: "Run session mismatch" as const };
   }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addScore } from "../../../lib/server/leaderboardStore";
+import { addScore, updateLeaderboardProfile } from "../../../lib/server/leaderboardStore";
 import { checkBobrosHolder, isValidSolanaAddress } from "../../../lib/server/checkBobrosHolder";
 import { allowedSkins, allowedZones, maxScore } from "../../../lib/server/gameConfig";
 import { checkRateLimit, getClientIp } from "../../../lib/server/rateLimit";
@@ -19,6 +19,12 @@ type ScorePayload = {
   runId?: unknown;
 };
 
+type ScoreProfilePayload = {
+  displayName?: unknown;
+  wallet?: unknown;
+  xHandle?: unknown;
+};
+
 type ValidatedScorePayload =
   | {
       value: {
@@ -29,6 +35,18 @@ type ValidatedScorePayload =
         displayName?: string;
         xHandle?: string;
         runId: string;
+      };
+    }
+  | {
+      error: string;
+    };
+
+type ValidatedScoreProfilePayload =
+  | {
+      value: {
+        wallet: string;
+        displayName?: string;
+        xHandle?: string;
       };
     }
   | {
@@ -102,6 +120,32 @@ function validateScorePayload(payload: ScorePayload): ValidatedScorePayload {
       displayName,
       xHandle,
       runId,
+    },
+  };
+}
+
+function validateScoreProfilePayload(payload: ScoreProfilePayload): ValidatedScoreProfilePayload {
+  const wallet = typeof payload.wallet === "string" ? payload.wallet.trim() : "";
+  const displayName = typeof payload.displayName === "string" ? payload.displayName : undefined;
+  const xHandle = typeof payload.xHandle === "string" ? payload.xHandle.trim().replace(/^@+/, "") : undefined;
+
+  if (!isValidSolanaAddress(wallet)) {
+    return { error: "Invalid wallet" as const };
+  }
+
+  if (displayName !== undefined && displayName.length > 64) {
+    return { error: "Invalid display name" as const };
+  }
+
+  if (xHandle !== undefined && xHandle.length > 0 && !/^[a-zA-Z0-9_]{1,15}$/.test(xHandle)) {
+    return { error: "Invalid X handle" as const };
+  }
+
+  return {
+    value: {
+      wallet,
+      displayName,
+      xHandle: xHandle || undefined,
     },
   };
 }
@@ -209,4 +253,81 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(leaderboard);
+}
+
+export async function PATCH(request: Request) {
+  if (isOversized(request)) {
+    return jsonError("Request body too large", 413);
+  }
+
+  const clientIp = getClientIp(request);
+  let ipLimit;
+
+  try {
+    ipLimit = await checkRateLimit({ namespace: "score-profile-ip", key: clientIp, limit: 30, windowMs: 5 * 60_000 });
+  } catch {
+    return jsonError("Score service unavailable", 503);
+  }
+
+  if (ipLimit.limited) {
+    return jsonError("Too many requests", 429, ipLimit.retryAfterSeconds);
+  }
+
+  let payload: ScoreProfilePayload;
+
+  try {
+    payload = (await request.json()) as ScoreProfilePayload;
+  } catch {
+    return jsonError("Invalid JSON", 400);
+  }
+
+  const validated = validateScoreProfilePayload(payload);
+
+  if ("error" in validated) {
+    return jsonError(validated.error, 400);
+  }
+
+  let walletLimit;
+
+  try {
+    walletLimit = await checkRateLimit({
+      namespace: "score-profile-wallet",
+      key: `${clientIp}:${validated.value.wallet}`,
+      limit: 12,
+      windowMs: 5 * 60_000,
+    });
+  } catch {
+    return jsonError("Score service unavailable", 503);
+  }
+
+  if (walletLimit.limited) {
+    return jsonError("Too many requests", 429, walletLimit.retryAfterSeconds);
+  }
+
+  let holder;
+
+  try {
+    holder = await checkBobrosHolder(validated.value.wallet);
+  } catch {
+    return jsonError("Holder verification unavailable", 502);
+  }
+
+  if (!holder.isHolder) {
+    return jsonError("Holder wallet required", 403);
+  }
+
+  // Profile updates deliberately do not change score or consume a run session.
+  // This keeps already accepted no-sign scores from being lost while still
+  // preserving the existing no-sign impersonation limitation.
+  try {
+    const leaderboard = await updateLeaderboardProfile({
+      wallet: holder.wallet,
+      displayName: validated.value.displayName,
+      xHandle: validated.value.xHandle,
+    });
+
+    return NextResponse.json(leaderboard);
+  } catch {
+    return jsonError("Leaderboard unavailable", 503);
+  }
 }

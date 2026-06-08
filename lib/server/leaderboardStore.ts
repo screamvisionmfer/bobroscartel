@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { formatMcap, getUtcWeekEndsAt, getUtcWeekId } from "./gameConfig";
-import { getRedis } from "./redis";
+import { getRedis, withRedisTimeout } from "./redis";
 
 export type LeaderboardEntry = {
   rank: number;
@@ -193,8 +193,8 @@ async function getRedisEntriesFromSet(key: string, limit: number, scope: "weekly
 
   if (!redis) return null;
 
-  const members = await redis.zrange<string[]>(key, 0, limit - 1, { rev: true });
-  const entries = await Promise.all(
+  const members = await withRedisTimeout(redis.zrange<string[]>(key, 0, limit - 1, { rev: true }));
+  const entries = await withRedisTimeout(Promise.all(
     members.map(async (member) => {
       if (scope === "weekly" && weekId) {
         return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.weeklyEntry(weekId, member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
@@ -202,7 +202,7 @@ async function getRedisEntriesFromSet(key: string, limit: number, scope: "weekly
 
       return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.allTimeEntry(member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
     }),
-  );
+  ));
 
   return entries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
 }
@@ -212,7 +212,7 @@ async function getRedisBestScore(key: string) {
 
   if (!redis) return 0;
 
-  const value = await redis.get<number>(key);
+  const value = await withRedisTimeout(redis.get<number>(key));
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
@@ -224,7 +224,7 @@ async function setRedisBestScore(key: string, score: number) {
   const currentBest = await getRedisBestScore(key);
 
   if (score > currentBest) {
-    await redis.set(key, score);
+  await withRedisTimeout(redis.set(key, score));
   }
 }
 
@@ -327,10 +327,10 @@ export async function addScore(payload: {
 
   const weeklyEntryKey = leaderboardKeys.weeklyEntry(payload.weekId, payload.wallet);
   const allTimeEntryKey = leaderboardKeys.allTimeEntry(payload.wallet);
-  const [existingWeeklyEntry, existingAllTimeEntry] = await Promise.all([
+  const [existingWeeklyEntry, existingAllTimeEntry] = await withRedisTimeout(Promise.all([
     redis.get<StoredLeaderboardEntry>(weeklyEntryKey),
     redis.get<StoredLeaderboardEntry>(allTimeEntryKey),
-  ]);
+  ]));
 
   if (existingWeeklyEntry && normalizedScore <= existingWeeklyEntry.score) {
     return getLeaderboard(payload.wallet, "weekly");
@@ -349,9 +349,74 @@ export async function addScore(payload: {
       .set(leaderboardKeys.allTimeBest(payload.wallet), normalizedScore);
   }
 
-  await pipeline.exec();
+  await withRedisTimeout(pipeline.exec());
 
   return getLeaderboard(payload.wallet, "weekly");
+}
+
+export async function updateLeaderboardProfile(payload: {
+  wallet: string;
+  displayName?: string;
+  xHandle?: string;
+  weekId?: string;
+}) {
+  const weekId = payload.weekId ?? getUtcWeekId();
+  const displayName = sanitizeDisplayName(payload.displayName);
+  const xHandle = sanitizeXHandle(payload.xHandle);
+  const redis = getRedis();
+
+  const updateEntry = (entry: StoredLeaderboardEntry): StoredLeaderboardEntry => ({
+    ...entry,
+    displayName,
+    xHandle,
+  });
+
+  if (!redis) {
+    const currentEntries = getMemoryEntries();
+    let updated = false;
+
+    globalWithLeaderboard.bobrosLeaderboard = currentEntries.map((entry) => {
+      if (entry.wallet !== payload.wallet) return entry;
+      if (entry.weekId !== weekId && !entry.entryId.startsWith("all-time:")) return entry;
+
+      updated = true;
+      return updateEntry(entry);
+    });
+
+    return {
+      ...(await getLeaderboard(payload.wallet, "weekly")),
+      profileUpdated: updated,
+    };
+  }
+
+  const weeklyEntryKey = leaderboardKeys.weeklyEntry(weekId, payload.wallet);
+  const allTimeEntryKey = leaderboardKeys.allTimeEntry(payload.wallet);
+  const [weeklyEntry, allTimeEntry] = await withRedisTimeout(Promise.all([
+    redis.get<StoredLeaderboardEntry>(weeklyEntryKey),
+    redis.get<StoredLeaderboardEntry>(allTimeEntryKey),
+  ]));
+
+  const pipeline = redis.pipeline();
+  let updated = false;
+
+  if (weeklyEntry) {
+    pipeline.set(weeklyEntryKey, updateEntry(weeklyEntry));
+    updated = true;
+  }
+
+  if (allTimeEntry) {
+    pipeline.set(allTimeEntryKey, updateEntry(allTimeEntry));
+    updated = true;
+  }
+
+  if (updated) {
+    await withRedisTimeout(pipeline.exec());
+  }
+
+  return {
+    ...(await getLeaderboard(payload.wallet, "weekly")),
+    profileUpdated: updated,
+  };
 }
 
 export async function getAdminLeaderboard(weekId = getUtcWeekId(), limit = 100) {
@@ -418,12 +483,12 @@ export async function resetLeaderboard(options: {
   }
 
   const weeklyKey = leaderboardKeys.weekly(weekId);
-  const weeklyMembers = await redis.zrange<string[]>(weeklyKey, 0, -1);
-  const weeklyEntries = await Promise.all(
+  const weeklyMembers = await withRedisTimeout(redis.zrange<string[]>(weeklyKey, 0, -1));
+  const weeklyEntries = await withRedisTimeout(Promise.all(
     weeklyMembers.map(async (member) => {
       return (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.weeklyEntry(weekId, member))) ?? (await redis.get<StoredLeaderboardEntry>(leaderboardKeys.entry(member)));
     }),
-  );
+  ));
   const existingWeeklyEntries = weeklyEntries.filter((entry): entry is StoredLeaderboardEntry => Boolean(entry));
   const weeklyWallets = Array.from(new Set(existingWeeklyEntries.map((entry) => entry.wallet)));
 
@@ -447,7 +512,7 @@ export async function resetLeaderboard(options: {
   const planned = Array.from(keysPlanned);
 
   if (!dryRun && planned.length > 0) {
-    await redis.del(...planned);
+    await withRedisTimeout(redis.del(...planned));
   }
 
   return {
@@ -460,4 +525,3 @@ export async function resetLeaderboard(options: {
     deletedKeys: dryRun ? [] : planned,
   };
 }
-

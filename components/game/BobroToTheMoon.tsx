@@ -72,6 +72,15 @@ const mumuAssetPath = "/game/assets/mumu.png";
 const evilMumuAssetPath = "/game/assets/evil-mumu.png";
 const honeyLifeAssetPath = "/game/assets/honey.png";
 const jetpackAssetPath = "/game/assets/jetpack.png";
+const uiAssetPaths = ["/assets/logo.png", "/assets/cloud.png"] as const;
+const loadingMessages = [
+  "loading mumu threats...",
+  "warming up paper engines...",
+  "preparing candles...",
+  "checking moon route...",
+  "loading bobro brains...",
+  "stabilizing market...",
+] as const;
 
 const deathMessages = [
   "HE BOUGHT THE TOP.",
@@ -114,12 +123,12 @@ const stageLabels = [
 ] as const;
 const headOptions = [
   { key: "bobro-head", label: "BOBRO", unlockAt: 0, src: headAssetPaths["bobro-head"] },
-  { key: "bobohazard", label: "HAZARD", unlockAt: 50_000_000, src: headAssetPaths.bobohazard },
-  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 100_000_000, src: headAssetPaths["high-bobo"] },
-  { key: "luchador", label: "LUCHADOR", unlockAt: 500_000_000, src: headAssetPaths.luchador },
-  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 4_000_000_000, src: headAssetPaths.skelebobo },
-  { key: "diamondbobo", label: "DIAMOND", unlockAt: 8_000_000_000, src: headAssetPaths.diamondbobo },
-  { key: "og-rekt", label: "OG REKT", unlockAt: 69_000_000_000, src: headAssetPaths["og-rekt"] },
+  { key: "bobohazard", label: "HAZARD", unlockAt: 5_000_000, src: headAssetPaths.bobohazard },
+  { key: "high-bobo", label: "HIGH BOBO", unlockAt: 10_000_000, src: headAssetPaths["high-bobo"] },
+  { key: "luchador", label: "LUCHADOR", unlockAt: 30_000_000, src: headAssetPaths.luchador },
+  { key: "skelebobo", label: "SKELEBOBO", unlockAt: 250_000_000, src: headAssetPaths.skelebobo },
+  { key: "diamondbobo", label: "DIAMOND", unlockAt: 4_000_000_000, src: headAssetPaths.diamondbobo },
+  { key: "og-rekt", label: "OG REKT", unlockAt: 6_900_000_000, src: headAssetPaths["og-rekt"] },
   { key: "theoneape", label: "The JB Ape", unlockAt: 420_000_000_000, src: headAssetPaths["theoneape"] },
 ] as const;
 function getWalletStorageId(wallet = "") {
@@ -264,6 +273,18 @@ type MumuObstacle = {
   phase: number;
 };
 
+type ArcadeEventTone = "positive" | "zone" | "danger" | "reward" | "info";
+
+type ArcadeEvent = {
+  id: number;
+  text: string;
+  subtitle: string;
+  icon: string;
+  tone: ArcadeEventTone;
+  createdAt: number;
+  duration: number;
+};
+
 type Player = {
   x: number;
   y: number;
@@ -301,12 +322,17 @@ type World = {
   deathMessage: string;
   bonusLabel: string;
   noticeUntil: number;
+  arcadeEvents: ArcadeEvent[];
+  nextArcadeEventId: number;
+  lastArcadeEventText: string;
+  lastArcadeEventAt: number;
   scoreMultiplierUntil: number;
   scoreSubmitted: boolean;
   backgroundSeed: number;
   shakePower: number;
   flashPower: number;
   countdownStartedAt: number;
+  countdownStartedAtMs: number;
   jetpackBoostUntil: number;
   jetpackBoostStartedAt: number;
   pausedFrom?: "countdown" | "playing";
@@ -340,6 +366,8 @@ type World = {
   hitStopRemaining: number;
   milestonePulseUntil: number;
   nextMilestoneIndex: number;
+  unlockBaseScore: number;
+  unlocksThisRun: HeadKey[];
 };
 
 type InputState = {
@@ -359,6 +387,7 @@ type HudState = {
   countdownText: string;
   statusLabels: string[];
   milestoneActive: boolean;
+  arcadeEvents: ArcadeEvent[];
 };
 
 const initialHudState: HudState = {
@@ -373,6 +402,7 @@ const initialHudState: HudState = {
   countdownText: "",
   statusLabels: [],
   milestoneActive: false,
+  arcadeEvents: [],
 };
 
 function areHudStatesEqual(left: HudState, right: HudState) {
@@ -388,8 +418,36 @@ function areHudStatesEqual(left: HudState, right: HudState) {
     left.countdownText === right.countdownText &&
     left.milestoneActive === right.milestoneActive &&
     left.statusLabels.length === right.statusLabels.length &&
-    left.statusLabels.every((label, index) => label === right.statusLabels[index])
+    left.statusLabels.every((label, index) => label === right.statusLabels[index]) &&
+    left.arcadeEvents.length === right.arcadeEvents.length &&
+    left.arcadeEvents.every((event, index) => {
+      const other = right.arcadeEvents[index];
+      return (
+        other !== undefined &&
+        event.id === other.id &&
+        event.text === other.text &&
+        event.subtitle === other.subtitle &&
+        event.icon === other.icon &&
+        event.tone === other.tone
+      );
+    })
   );
+}
+
+function getArcadeEventToneClass(tone: ArcadeEventTone) {
+  switch (tone) {
+    case "positive":
+      return styles.arcadeEventPositive;
+    case "zone":
+      return styles.arcadeEventZone;
+    case "danger":
+      return styles.arcadeEventDanger;
+    case "reward":
+      return styles.arcadeEventReward;
+    case "info":
+    default:
+      return styles.arcadeEventInfo;
+  }
 }
 
 type RunResult = {
@@ -403,7 +461,7 @@ type RunResult = {
   bestToday: number;
   honeyLivesCollected: number;
   livesUsed: number;
-  unlockedSkinLabel?: string;
+  unlockedSkinLabels: string[];
   saved: boolean;
   runId?: string;
   weekId?: string;
@@ -447,6 +505,45 @@ const particleLimitPerformance = 32;
 const feedbackLimitDesktop = 12;
 const feedbackLimitPerformance = 6;
 const majorMcapMilestones = [1_000_000, 10_000_000, 100_000_000, 1_000_000_000, 10_000_000_000, 69_000_000_000] as const;
+
+function SoundHudIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 9.25h3.35L12.2 5.2c.7-.58 1.8-.08 1.8.84v11.92c0 .92-1.1 1.42-1.8.84l-4.85-4.05H4a1 1 0 0 1-1-1v-3.5a1 1 0 0 1 1-1Z" />
+      {muted ? (
+        <>
+          <path d="m17.25 8.75 3.5 3.5" />
+          <path d="m20.75 8.75-3.5 3.5" />
+        </>
+      ) : (
+        <>
+          <path d="M17 8.4c.9.95 1.35 2.05 1.35 3.3S17.9 14.05 17 15" />
+          <path d="M19.4 6.2c1.55 1.55 2.32 3.38 2.32 5.5s-.77 3.95-2.32 5.5" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function HomeHudIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="m3.4 11.2 8.6-7 8.6 7" />
+      <path d="M6.2 10.6v8.1c0 .9.7 1.6 1.6 1.6h8.4c.9 0 1.6-.7 1.6-1.6v-8.1" />
+      <path d="M9.8 20.3v-5.6h4.4v5.6" />
+    </svg>
+  );
+}
+
+function HelpHudIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+      <path d="M9.65 9.15c.2-1.55 1.3-2.45 2.95-2.35 1.5.1 2.7 1.05 2.7 2.55 0 2.15-2.35 2.15-2.8 4.05" />
+      <path d="M12.45 16.8h.02" />
+    </svg>
+  );
+}
 
 function pickRandom<T>(items: readonly T[]) {
   return items[Math.floor(Math.random() * items.length)] ?? items[0];
@@ -511,6 +608,19 @@ function formatMarketCap(score: number) {
   return formatMcap(score);
 }
 
+function getMilestoneSubtitle(milestone: number) {
+  if (milestone >= 69_000_000_000) return "BOBO HEAVEN UNLOCKED";
+  if (milestone >= 10_000_000_000) return "BILLIONAIRE AIRSPACE";
+  if (milestone >= 1_000_000_000) return "WELCOME TO THE BIG LEAGUES";
+  if (milestone >= 100_000_000) return "MOON SIGNAL LOCKED";
+  if (milestone >= 10_000_000) return "MARKET IS MOVING";
+  return "FIRST MILLION PRINTED";
+}
+
+function getUnlocksBetween(previousScore: number, nextScore: number) {
+  return headOptions.filter((head) => head.unlockAt > previousScore && head.unlockAt <= nextScore && head.unlockAt > 0);
+}
+
 function normalizePlayerName(value: string) {
   return value.replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, 16);
 }
@@ -572,6 +682,7 @@ function formatMarkerScore(score: number) {
 }
 
 const imageDecodeCache = new Map<string, Promise<HTMLImageElement | null>>();
+const loggedImageFailures = new Set<string>();
 type PosterDrawParams = {
   drawWidth: number;
   drawHeight: number;
@@ -597,14 +708,47 @@ function loadCanvasImage(src: string) {
       image
         .decode()
         .then(() => resolve(image))
-        .catch(() => resolve(image));
+        .catch(() => {
+          if (!loggedImageFailures.has(src)) {
+            loggedImageFailures.add(src);
+            console.warn(`BOBRO asset decode fallback: ${src}`);
+          }
+          resolve(image);
+        });
     };
-    image.onerror = () => resolve(null);
+    image.onerror = () => {
+      if (!loggedImageFailures.has(src)) {
+        loggedImageFailures.add(src);
+        console.warn(`BOBRO asset load failed: ${src}`);
+      }
+      resolve(null);
+    };
     image.src = src;
   });
 
   imageDecodeCache.set(src, loadPromise);
   return loadPromise;
+}
+
+async function preloadImages<T extends string>(
+  entries: ReadonlyArray<readonly [T, string]>,
+  onProgress: (loaded: number, total: number) => void,
+  initialLoaded = 0,
+  totalAssets = entries.length,
+) {
+  const total = Math.max(1, totalAssets);
+  let loaded = 0;
+
+  const loadedEntries = await Promise.all(
+    entries.map(async ([key, src]) => {
+      const image = await loadCanvasImage(src);
+      loaded += 1;
+      onProgress(initialLoaded + loaded, total);
+      return [key, image] as const;
+    }),
+  );
+
+  return loadedEntries;
 }
 
 function getPosterDrawParams(image: HTMLImageElement, width: number, height: number) {
@@ -675,8 +819,49 @@ function getBestScoreKey(mode: GameMode, wallet = "") {
   return `bobro-to-the-moon-holder-best-${walletKey}-${localDateKey()}`;
 }
 
+function getProfileStorageKey(wallet: string) {
+  return getHolderStorageKey(wallet, "profile");
+}
+
+const lastHolderWalletKey = "bobro-to-the-moon:last-holder-wallet";
+
+function readStoredProfile(wallet: string) {
+  if (!wallet) return null;
+
+  try {
+    const rawProfile = window.localStorage.getItem(getProfileStorageKey(wallet));
+    if (!rawProfile) return null;
+
+    const parsed = JSON.parse(rawProfile) as { displayName?: unknown; xHandle?: unknown };
+
+    return {
+      displayName: typeof parsed.displayName === "string" ? getValidPlayerName(parsed.displayName) ?? defaultPlayerName : defaultPlayerName,
+      xHandle: typeof parsed.xHandle === "string" ? normalizeXHandle(parsed.xHandle) : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredProfile(wallet: string, displayName: string, xHandle: string) {
+  if (!wallet) return;
+
+  window.localStorage.setItem(lastHolderWalletKey, wallet);
+  window.localStorage.setItem(
+    getProfileStorageKey(wallet),
+    JSON.stringify({
+      wallet,
+      displayName: getValidPlayerName(displayName) ?? defaultPlayerName,
+      xHandle: normalizeXHandle(xHandle),
+    }),
+  );
+}
+
 function getCountdownText(world: World) {
-  const elapsed = world.time - world.countdownStartedAt;
+  const nowMs =
+    typeof window !== "undefined" && typeof window.performance !== "undefined" ? window.performance.now() : Date.now();
+  const wallElapsed = world.countdownStartedAtMs > 0 ? (nowMs - world.countdownStartedAtMs) / 1000 : 0;
+  const elapsed = Math.max(world.time - world.countdownStartedAt, wallElapsed);
 
   if (elapsed < 0.7) return "3";
   if (elapsed < 1.4) return "2";
@@ -1411,7 +1596,9 @@ function spawnMumu(
   world: World,
   options: { side?: "left" | "right"; verticalBias?: number; forceMode?: MumuObstacle["mode"]; variant?: MumuObstacle["variant"] } = {},
 ) {
-  placeMumu(world, createMumuObstacle(world, options));
+  const mumu = createMumuObstacle(world, options);
+  placeMumu(world, mumu);
+  pushArcadeEvent(world, mumu.warningLabel, 1.35);
   world.nextMumuId += 1;
 }
 
@@ -1633,12 +1820,17 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
     deathMessage: "",
     bonusLabel: "",
     noticeUntil: 0,
+    arcadeEvents: [],
+    nextArcadeEventId: 1,
+    lastArcadeEventText: "",
+    lastArcadeEventAt: -999,
     scoreMultiplierUntil: 0,
     scoreSubmitted: false,
     backgroundSeed: Math.random() * 1000,
     shakePower: 0,
     flashPower: 0,
     countdownStartedAt: 0,
+    countdownStartedAtMs: 0,
     jetpackBoostUntil: 0,
     jetpackBoostStartedAt: 0,
     pausedFrom: undefined,
@@ -1672,6 +1864,8 @@ function createWorld(width = defaultWidth, height = defaultHeight, status: World
     hitStopRemaining: 0,
     milestonePulseUntil: 0,
     nextMilestoneIndex: 0,
+    unlockBaseScore: 0,
+    unlocksThisRun: [],
   };
 
   while (world.nextPlatformY < height + 220 || futurePathPlatformCount(world) < futurePathPlatformTarget) {
@@ -1717,9 +1911,137 @@ function screenY(world: World, worldY: number) {
   return world.height - (worldY - world.cameraY);
 }
 
+function getArcadeEventMeta(label: string): { text: string; subtitle: string; icon: string; tone: ArcadeEventTone } {
+  const normalized = label.trim().toUpperCase();
+
+  if (normalized.startsWith("ENTERING ")) {
+    return { text: `${normalized.replace("ENTERING ", "")} ENTERED`, subtitle: "THE HIGHER YOU GO...", icon: "📍", tone: "zone" };
+  }
+
+  if (normalized.includes("UNLOCKED")) {
+    return { text: normalized, subtitle: "NEW BOBRO READY", icon: "🔓", tone: "zone" };
+  }
+
+  if (normalized.includes("MUMU")) {
+    return { text: normalized.includes("SMASH") ? "MUMU SMASH" : normalized, subtitle: "WATCH OUT!", icon: "☠", tone: "danger" };
+  }
+
+  if (normalized.includes("MARKET") || normalized.includes("RED") || normalized.includes("RUG")) {
+    return {
+      text: normalized.includes("OH SHIT") ? "MARKET PANIC" : normalized,
+      subtitle: normalized.includes("RUG") ? "DON'T TRUST THE FLOOR" : normalized.includes("RED") ? "CANDLE IS CRACKING" : "PANIC CANDLES ACTIVE",
+      icon: normalized.includes("MARKET") ? "💊" : "⚠",
+      tone: "danger",
+    };
+  }
+
+  if (normalized.includes("INTOXICATED") || normalized.includes("OVERDOSE") || normalized.includes("TOO MUCH")) {
+    return { text: normalized, subtitle: "CONTROLS REVERSED", icon: "🍯", tone: "danger" };
+  }
+
+  if (normalized.includes("HONEY")) {
+    return {
+      text: normalized,
+      subtitle: normalized.includes("EXTRA") ? "+1 LIFE" : "SWEET BOOST",
+      icon: "🍯",
+      tone: normalized.includes("EXTRA") ? "reward" : "positive",
+    };
+  }
+
+  if (normalized.includes("BOBOCLAAAAAT") || normalized.includes("ON FIRE")) {
+    return { text: "ON FIRE MODE", subtitle: "PUMP IT TO THE MOON!", icon: "🔥", tone: "positive" };
+  }
+
+  if (normalized.includes("CASH") || normalized.includes("JETPACK") || normalized.includes("SOL")) {
+    return { text: normalized, subtitle: normalized.includes("JETPACK") ? "MEGA LAUNCH" : "BOOST ROUTE", icon: "⚡", tone: "positive" };
+  }
+
+  if (normalized.includes("SAVED") || normalized.includes("EMERGENCY") || emergencySaveMessages.includes(normalized as (typeof emergencySaveMessages)[number])) {
+    return { text: "EMERGENCY PLATFORM", subtitle: "BOBO MERCY", icon: "⚠", tone: "reward" };
+  }
+
+  if (normalized.includes("MCAP") || normalized.includes("MILESTONE")) {
+    return { text: normalized, subtitle: "MARKET MOVING", icon: "◆", tone: "reward" };
+  }
+
+  return { text: normalized, subtitle: "KEEP CLIMBING", icon: "•", tone: "info" };
+}
+
+function shouldShowArcadeEvent(label: string) {
+  const normalized = label.trim().toUpperCase();
+
+  return (
+    normalized.startsWith("ENTERING ") ||
+    normalized.includes("UNLOCKED") ||
+    normalized.includes("MUMU") ||
+    normalized.includes("OH SHIT") ||
+    normalized.includes("MARKET PANIC") ||
+    normalized.includes("BOBOCLAAAAAT") ||
+    normalized.includes("ON FIRE") ||
+    normalized.includes("EXTRA HONEY") ||
+    normalized.includes("INTOXICATED") ||
+    normalized.includes("OVERDOSE") ||
+    normalized.includes("TOO MUCH") ||
+    normalized.includes("MCAP REACHED") ||
+    normalized.includes("MILESTONE") ||
+    normalized.includes("SAVED") ||
+    normalized.includes("EMERGENCY") ||
+    emergencySaveMessages.includes(normalized as (typeof emergencySaveMessages)[number])
+  );
+}
+
+function getArcadeEventPriority(tone: ArcadeEventTone, text: string) {
+  if (text.includes("MUMU")) return 5;
+  if (tone === "danger") return 4;
+  if (text.includes("ON FIRE") || text.includes("UNLOCKED")) return 3;
+  if (tone === "zone" || tone === "reward") return 2;
+  return 1;
+}
+
+function pushArcadeEvent(world: World, label: string, duration = 3.4) {
+  if (!shouldShowArcadeEvent(label)) return;
+
+  const meta = getArcadeEventMeta(label);
+  const text = meta.text.slice(0, 34);
+  if (!text) return;
+  const eventDuration = Math.max(duration, 3.25);
+
+  const duplicateActive = world.arcadeEvents.some((event) => event.text === text);
+  if (duplicateActive && world.lastArcadeEventText === text && world.time - world.lastArcadeEventAt < 0.75) {
+    return;
+  }
+
+  const currentEvent = world.arcadeEvents[0];
+  const nextPriority = getArcadeEventPriority(meta.tone, text);
+  const currentPriority = currentEvent ? getArcadeEventPriority(currentEvent.tone, currentEvent.text) : 0;
+  const currentAge = currentEvent ? world.time - currentEvent.createdAt : Number.POSITIVE_INFINITY;
+
+  if (currentEvent && nextPriority < currentPriority && currentAge < 1.1) {
+    return;
+  }
+
+  const event: ArcadeEvent = {
+    id: world.nextArcadeEventId,
+    text,
+    subtitle: meta.subtitle,
+    icon: meta.icon,
+    tone: meta.tone,
+    createdAt: world.time,
+    duration: eventDuration,
+  };
+
+  world.lastArcadeEventText = text;
+  world.lastArcadeEventAt = world.time;
+  world.nextArcadeEventId += 1;
+  world.arcadeEvents = [event];
+}
+
+function updateArcadeEvents(world: World) {
+  world.arcadeEvents = world.arcadeEvents.filter((event) => world.time - event.createdAt < event.duration);
+}
+
 function triggerNotice(world: World, label: string, duration = 1.45) {
-  world.bonusLabel = label;
-  world.noticeUntil = world.time + duration;
+  pushArcadeEvent(world, label, Math.max(duration, 3.25));
 }
 
 function triggerHitStop(world: World, durationSeconds: number) {
@@ -2316,7 +2638,6 @@ function activateOnFire(world: World, playAudioCue?: (cue: GameAudioCue) => void
   triggerHitStop(world, 0.05);
   addPaperParticles(world, world.player.x, world.player.y, "#e05b2d", 16, 1.5);
   triggerNotice(world, "BOBOCLAAAAAT MODE", 1.5);
-  pushFloatingText(world, "BOBOCLAAAAAT MODE", world.player.x, world.player.y + 48, "#e05b2d");
   playAudioCue?.("onFire");
 }
 
@@ -2346,12 +2667,25 @@ function awardAltitudeScore(world: World) {
   world.lastScoredAltitude = world.maxAltitude;
   syncDisplayScore(world);
 
-  while (majorMcapMilestones[world.nextMilestoneIndex] !== undefined && getDisplayScore(world) >= majorMcapMilestones[world.nextMilestoneIndex]) {
+  const nextScore = getDisplayScore(world);
+
+  if (world.unlockBaseScore < Number.POSITIVE_INFINITY) {
+    for (const head of getUnlocksBetween(Math.max(world.unlockBaseScore, previousScore), nextScore)) {
+      if (world.unlocksThisRun.includes(head.key)) continue;
+
+      world.unlocksThisRun.push(head.key);
+      const unlockLabel = `${head.label} UNLOCKED`;
+      pushArcadeEvent(world, unlockLabel, 1.75);
+    }
+  }
+
+  while (majorMcapMilestones[world.nextMilestoneIndex] !== undefined && nextScore >= majorMcapMilestones[world.nextMilestoneIndex]) {
     const milestone = majorMcapMilestones[world.nextMilestoneIndex];
     world.nextMilestoneIndex += 1;
 
     if (previousScore < milestone) {
       world.milestonePulseUntil = world.time + 1.15;
+      pushArcadeEvent(world, `${formatMcap(milestone)} MCAP REACHED`, 1.8);
       world.shakePower = Math.max(world.shakePower, 5);
       world.flashPower = Math.max(world.flashPower, 0.18);
       world.cameraKick = Math.max(world.cameraKick, 5);
@@ -2379,6 +2713,7 @@ function updateWorld(
   }
 
   world.time += deltaSeconds;
+  updateArcadeEvents(world);
   world.shakePower = Math.max(0, world.shakePower - deltaSeconds * 18);
   world.flashPower = Math.max(0, world.flashPower - deltaSeconds * 2.6);
   world.cameraKick *= Math.max(0, 1 - deltaSeconds * 10.5);
@@ -2401,7 +2736,10 @@ function updateWorld(
   }
 
   if (world.status === "countdown") {
-    if (world.time - world.countdownStartedAt >= countdownDuration) {
+    const nowMs =
+      typeof window !== "undefined" && typeof window.performance !== "undefined" ? window.performance.now() : Date.now();
+    const wallElapsed = world.countdownStartedAtMs > 0 ? (nowMs - world.countdownStartedAtMs) / 1000 : 0;
+    if (Math.max(world.time - world.countdownStartedAt, wallElapsed) >= countdownDuration) {
       finishCountdownWorld(world);
     }
 
@@ -2997,7 +3335,6 @@ function drawTransitionOverlay(
 
   const performanceMode = isPerformanceModeWorld(world);
   const pulse = Math.sin(mix.alpha * Math.PI);
-  const textAlpha = clamp(pulse * 1.25, 0, 1);
 
   if (!performanceMode) {
     context.save();
@@ -3009,21 +3346,6 @@ function drawTransitionOverlay(
     drawTornTransitionBand(context, world, true, 0.46 * pulse);
     drawTornTransitionBand(context, world, false, 0.36 * pulse);
   }
-
-  context.save();
-  context.globalAlpha = textAlpha;
-  const panelWidth = Math.min(world.width - 42, 286);
-  const panelHeight = 48;
-  const panelX = (world.width - panelWidth) / 2;
-  const panelY = world.height * 0.46 - panelHeight / 2;
-
-  context.fillStyle = "rgba(19, 14, 12, 0.82)";
-  context.fillRect(panelX, panelY, panelWidth, panelHeight);
-  context.strokeStyle = "#e4b745";
-  context.lineWidth = 2;
-  context.strokeRect(panelX + 4, panelY + 4, panelWidth - 8, panelHeight - 8);
-  drawPixelText(context, mix.message, world.width / 2, panelY + panelHeight / 2 + 1, 18, "#f4e4b2");
-  context.restore();
 }
 
 function drawBackground(context: CanvasRenderingContext2D, world: World, assets: LoadedAssets) {
@@ -3058,7 +3380,6 @@ function drawBackground(context: CanvasRenderingContext2D, world: World, assets:
   if (!performanceMode) {
     drawPaperScratches(context, world);
   }
-  drawPixelText(context, getStage(biomeProgress), world.width / 2, 28, 13, "#f4e4b2");
 }
 
 function drawMoneyPrinterSparkles(context: CanvasRenderingContext2D, world: World, platform: Platform) {
@@ -3400,21 +3721,6 @@ function drawSingleMumu(
   const y = screenY(world, mumu.y);
 
   if (mumu.state === "warning") {
-    const warningAge = world.time - mumu.warningStartedAt;
-    const pulse = 0.68 + Math.sin(warningAge * 12) * 0.18;
-    const x = mumu.side === "left" ? 82 : world.width - 82;
-    const warningY = 54 + (mumu.id % 2) * 36;
-    const panelWidth = mumu.warningLabel === "RED MUMU" ? 112 : mumu.warningLabel === "MUMU PATROL" ? 132 : 144;
-
-    context.save();
-    context.globalAlpha = clamp(pulse, 0.35, 0.92);
-    context.fillStyle = mumu.variant === "red" ? "rgba(121, 32, 34, 0.88)" : "rgba(19, 14, 12, 0.82)";
-    context.fillRect(x - panelWidth / 2, warningY - 17, panelWidth, 34);
-    context.strokeStyle = mumu.variant === "red" ? "#f4e4b2" : "#e4b745";
-    context.lineWidth = 2;
-    context.strokeRect(x - panelWidth / 2 + 4, warningY - 13, panelWidth - 8, 26);
-    drawPixelText(context, mumu.warningLabel, x, warningY + 1, 12, "#f4e4b2");
-    context.restore();
     return;
   }
 
@@ -3558,8 +3864,6 @@ function drawOnFireCanvasEffects(context: CanvasRenderingContext2D, world: World
     }
   }
 
-  context.globalAlpha = 0.92;
-  drawPixelText(context, "BOBOCLAAAAAT MODE", world.width / 2, world.height * 0.22, performanceMode ? 22 : 30, "#e4b745");
   context.restore();
 }
 
@@ -3577,8 +3881,6 @@ function drawMarketCrashCanvasEffects(context: CanvasRenderingContext2D, world: 
   context.strokeStyle = "#d94b45";
   context.lineWidth = 3;
   context.strokeRect(7, 7, world.width - 14, world.height - 14);
-  context.globalAlpha = 0.82;
-  drawPixelText(context, "OH SHIT, BOBO MARKET", world.width / 2, 58, 15, "#d94b45");
 
   context.globalAlpha = 0.18 + remaining * 0.12;
   context.fillStyle = "#d94b45";
@@ -3770,6 +4072,31 @@ function drawWorld(context: CanvasRenderingContext2D, world: World, assets: Load
     context.fillRect(0, 0, world.width, world.height);
     context.restore();
   }
+}
+
+function drawEmergencyWorld(context: CanvasRenderingContext2D, world: World) {
+  context.save();
+  context.clearRect(0, 0, world.width, world.height);
+  context.restore();
+
+  context.save();
+  context.fillStyle = "#213141";
+  context.fillRect(0, 0, world.width, world.height);
+  context.fillStyle = "rgba(255, 255, 255, 0.12)";
+  for (let y = 40; y < world.height; y += 54) {
+    context.fillRect(0, y, world.width, 1);
+  }
+
+  for (const platform of world.platforms.slice(0, 10)) {
+    const y = screenY(world, platform.y);
+    if (y < -40 || y > world.height + 40) continue;
+    drawOutlinedRect(context, platform.x, y, platform.width, platform.height, platform.kind === "red-candle" ? "#b94b3e" : "#82a94c");
+  }
+
+  const playerY = screenY(world, world.player.y);
+  context.translate(world.player.x, playerY);
+  drawFallbackPlayer(context, world.player);
+  context.restore();
 }
 
 function drawScoreCardCloud(context: CanvasRenderingContext2D, x: number, y: number, scale: number) {
@@ -4063,9 +4390,13 @@ async function checkHolder(wallet: string) {
 export default function BobroToTheMoon({
   onScoreSubmitted,
   onAccessChange,
+  onStatusChange,
+  onOpenLeaderboard,
 }: {
   onScoreSubmitted: () => void;
   onAccessChange?: (access: { mode: GameMode; wallet?: string }) => void;
+  onStatusChange?: (status: WorldStatus | "loading") => void;
+  onOpenLeaderboard?: () => void;
 }) {
   const {
     muted: audioMuted,
@@ -4094,9 +4425,15 @@ export default function BobroToTheMoon({
   const activePointerIdRef = useRef<number | null>(null);
   const worldRef = useRef<World>(createWorld());
   const hudRef = useRef<HudState>(initialHudState);
+  const selectedHeadRef = useRef<HeadKey>("bobro-head");
+  const playAudioCueRef = useRef<(cue: GameAudioCue) => void>(() => undefined);
   const lastHudSyncTimeRef = useRef(0);
   const activeRunSessionRef = useRef<ActiveRunSession | null>(null);
+  const runSessionRequestInFlightRef = useRef(false);
+  const runNonceRef = useRef(0);
   const autoStartGuestRunRef = useRef(false);
+  const autoSavedRunIdsRef = useRef<Set<string>>(new Set());
+  const countdownWatchdogTimeoutRef = useRef<number | undefined>(undefined);
   const bestTodayRef = useRef(0);
   const recordRunRef = useRef<(world: World) => void>(() => undefined);
   const assetsRef = useRef<LoadedAssets>({
@@ -4111,6 +4448,8 @@ export default function BobroToTheMoon({
   });
   const countdownTimeoutRef = useRef<number | undefined>(undefined);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [loadMessage, setLoadMessage] = useState<string>(loadingMessages[0]);
   const [mode, setMode] = useState<GameMode>("guest");
   const [modeChosen, setModeChosen] = useState(false);
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("idle");
@@ -4126,7 +4465,12 @@ export default function BobroToTheMoon({
   const [nameError, setNameError] = useState("");
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [isPreparingRun, setIsPreparingRun] = useState(false);
   const [hud, setHud] = useState<HudState>(initialHudState);
+
+  useEffect(() => {
+    onStatusChange?.(assetsLoaded ? hud.status : "loading");
+  }, [assetsLoaded, hud.status, onStatusChange]);
 
   const syncHud = useCallback((force = false) => {
     const world = worldRef.current;
@@ -4153,6 +4497,7 @@ export default function BobroToTheMoon({
       countdownText: world.status === "countdown" ? getCountdownText(world) : "",
       statusLabels,
       milestoneActive: world.milestonePulseUntil > world.time,
+      arcadeEvents: world.arcadeEvents.map((event) => ({ ...event })),
     };
 
     if (areHudStatesEqual(hudRef.current, nextHud)) return;
@@ -4206,6 +4551,14 @@ export default function BobroToTheMoon({
     ],
   );
 
+  useEffect(() => {
+    selectedHeadRef.current = selectedHead;
+  }, [selectedHead]);
+
+  useEffect(() => {
+    playAudioCueRef.current = playAudioCue;
+  }, [playAudioCue]);
+
   const loadProgressForMode = useCallback(
     (nextMode: GameMode, nextWallet = "") => {
       const storedBest = window.localStorage.getItem(getBestScoreKey(nextMode, nextWallet));
@@ -4242,42 +4595,101 @@ export default function BobroToTheMoon({
 
   useEffect(() => {
     let isCancelled = false;
+    let didComplete = false;
+    const completePreloadWithFallback = () => {
+      if (isCancelled || didComplete) return;
+
+      didComplete = true;
+      window.clearTimeout(preloadTimeout);
+      setLoadProgress(100);
+      setAssetsLoaded(true);
+    };
+    const preloadTimeout = window.setTimeout(() => {
+      if (!didComplete) {
+        console.warn("BOBRO asset preload timeout fallback");
+        completePreloadWithFallback();
+      }
+    }, 12000);
 
     const loadAssets = async () => {
-      const [headEntries, backgroundEntries, platformEntries, honeyLifeImage, jetpackImage, mumuImage, evilMumuImage] = await Promise.all([
-        Promise.all(Object.entries(headAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
-        Promise.all(Object.entries(backgroundAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
-        Promise.all(Object.entries(platformAssetPaths).map(async ([key, src]) => [key, await loadCanvasImage(src)] as const)),
-        loadCanvasImage(honeyLifeAssetPath),
-        loadCanvasImage(jetpackAssetPath),
-        loadCanvasImage(mumuAssetPath),
-        loadCanvasImage(evilMumuAssetPath),
-      ]);
+      try {
+        const headAssetEntries = Object.entries(headAssetPaths) as Array<readonly [HeadKey, string]>;
+        const backgroundAssetEntries = Object.entries(backgroundAssetPaths) as Array<readonly [BackgroundKey, string]>;
+        const platformAssetEntries = Object.entries(platformAssetPaths) as Array<readonly [PlatformKind, string]>;
+        const pickupAssetEntries = [
+          ["honeyLife", honeyLifeAssetPath],
+          ["jetpack", jetpackAssetPath],
+          ["mumu", mumuAssetPath],
+          ["evilMumu", evilMumuAssetPath],
+        ] as const;
+        const uiAssetEntries = uiAssetPaths.map((src, index) => [`ui-${index}`, src] as const);
+        const totalAssets =
+          headAssetEntries.length +
+          backgroundAssetEntries.length +
+          platformAssetEntries.length +
+          pickupAssetEntries.length +
+          uiAssetEntries.length +
+          1;
+        let loadedAssets = 0;
+        let messageIndex = Math.floor(Math.random() * loadingMessages.length);
+        const onProgress = (loaded: number, total: number) => {
+          if (isCancelled || didComplete) return;
 
-      if (isCancelled) return;
+          loadedAssets = loaded;
+          setLoadProgress(Math.round((loaded / Math.max(1, total)) * 100));
+          if (loaded === 1 || loaded % 4 === 0 || loaded >= total) {
+            messageIndex = (messageIndex + 1) % loadingMessages.length;
+            setLoadMessage(loadingMessages[messageIndex]);
+          }
+        };
 
-      const heads = Object.fromEntries(headEntries.filter((entry) => entry[1])) as ImageMap<HeadKey>;
-      const fallbackHead = heads["bobro-head"] ?? (await loadCanvasImage(legacyPlayerAssetPath));
+        setLoadProgress(1);
+        setLoadMessage(loadingMessages[messageIndex]);
 
-      if (isCancelled) return;
+        const headEntries = await preloadImages(headAssetEntries, onProgress, loadedAssets, totalAssets);
+        loadedAssets += headAssetEntries.length;
+        const backgroundEntries = await preloadImages(backgroundAssetEntries, onProgress, loadedAssets, totalAssets);
+        loadedAssets += backgroundAssetEntries.length;
+        const platformEntries = await preloadImages(platformAssetEntries, onProgress, loadedAssets, totalAssets);
+        loadedAssets += platformAssetEntries.length;
+        const pickupEntries = await preloadImages(pickupAssetEntries, onProgress, loadedAssets, totalAssets);
+        loadedAssets += pickupAssetEntries.length;
+        await preloadImages(uiAssetEntries, onProgress, loadedAssets, totalAssets);
+        loadedAssets += uiAssetEntries.length;
 
-      assetsRef.current = {
-        heads,
-        fallbackHead,
-        backgrounds: Object.fromEntries(backgroundEntries.filter((entry) => entry[1])) as ImageMap<BackgroundKey>,
-        platforms: Object.fromEntries(platformEntries.filter((entry) => entry[1])) as ImageMap<PlatformKind>,
-        honeyLife: honeyLifeImage,
-        jetpack: jetpackImage,
-        mumu: mumuImage,
-        evilMumu: evilMumuImage,
-      };
-      setAssetsLoaded(true);
+        if (isCancelled) return;
+
+        const heads = Object.fromEntries(headEntries.filter((entry) => entry[1])) as ImageMap<HeadKey>;
+        const fallbackHead = heads["bobro-head"] ?? (await loadCanvasImage(legacyPlayerAssetPath));
+        loadedAssets += 1;
+        onProgress(loadedAssets, totalAssets);
+
+        if (isCancelled) return;
+
+        const pickupMap = Object.fromEntries(pickupEntries) as Partial<Record<(typeof pickupAssetEntries)[number][0], HTMLImageElement | null>>;
+
+        assetsRef.current = {
+          heads,
+          fallbackHead,
+          backgrounds: Object.fromEntries(backgroundEntries.filter((entry) => entry[1])) as ImageMap<BackgroundKey>,
+          platforms: Object.fromEntries(platformEntries.filter((entry) => entry[1])) as ImageMap<PlatformKind>,
+          honeyLife: pickupMap.honeyLife ?? null,
+          jetpack: pickupMap.jetpack ?? null,
+          mumu: pickupMap.mumu ?? null,
+          evilMumu: pickupMap.evilMumu ?? null,
+        };
+        completePreloadWithFallback();
+      } catch (error) {
+        console.warn("BOBRO asset preload fallback", error);
+        completePreloadWithFallback();
+      }
     };
 
     void loadAssets();
 
     return () => {
       isCancelled = true;
+      window.clearTimeout(preloadTimeout);
     };
   }, []);
 
@@ -4286,10 +4698,28 @@ export default function BobroToTheMoon({
   }, [loadProgressForMode]);
 
   useEffect(() => {
+    const lastHolderWallet = normalizeWalletInput(window.localStorage.getItem(lastHolderWalletKey) ?? "");
+    if (!isLikelySolanaWalletAddress(lastHolderWallet)) return;
+
+    setManualWalletAddress(lastHolderWallet);
+    const storedProfile = readStoredProfile(lastHolderWallet);
+    if (!storedProfile) return;
+
+    setPlayerName(storedProfile.displayName);
+    setXHandle(storedProfile.xHandle);
+  }, []);
+
+  useEffect(() => {
     if (mode === "guest" && selectedHead !== "bobro-head") {
       setSelectedHead("bobro-head");
     }
   }, [mode, selectedHead]);
+
+  useEffect(() => {
+    if (mode !== "holder" || !walletAddress) return;
+
+    writeStoredProfile(walletAddress, playerName, xHandle);
+  }, [mode, playerName, walletAddress, xHandle]);
 
   const selectHead = useCallback((head: HeadKey) => {
     if (mode !== "holder") return;
@@ -4310,6 +4740,29 @@ export default function BobroToTheMoon({
       setBobrosCount(count);
       setAccessMessage(`Holder mode active: ${count} Bobro detected.`);
       loadProgressForMode("holder", wallet);
+      window.localStorage.setItem(lastHolderWalletKey, wallet);
+      const storedProfile = readStoredProfile(wallet);
+      if (storedProfile) {
+        setPlayerName(storedProfile.displayName);
+        setXHandle(storedProfile.xHandle);
+      }
+      if (worldRef.current.status === "dead") {
+        activeRunSessionRef.current = activeRunSessionRef.current
+          ? { ...activeRunSessionRef.current, leaderboardEligible: true }
+          : activeRunSessionRef.current;
+        setRunResult((currentResult) =>
+          currentResult
+            ? {
+                ...currentResult,
+                mode: "holder",
+                leaderboardEligible: Boolean(currentResult.runId),
+                saved: false,
+              }
+            : currentResult,
+        );
+        setSaveStatus("idle");
+        setNameError("");
+      }
       onAccessChange?.({ mode: "holder", wallet });
     },
     [loadProgressForMode, onAccessChange],
@@ -4390,9 +4843,7 @@ export default function BobroToTheMoon({
       const nextBestToday = Math.max(previousBestToday, score);
       const skin = getHeadOption(selectedHead);
       const isHolderRun = mode === "holder";
-      const unlockedSkin = isHolderRun
-        ? [...headOptions].filter((head) => head.unlockAt > bestUnlockScore && head.unlockAt <= score).sort((left, right) => right.unlockAt - left.unlockAt)[0]
-        : undefined;
+      const unlockedSkinLabels = isHolderRun ? getUnlocksBetween(bestUnlockScore, score).map((head) => head.label) : [];
 
       bestTodayRef.current = nextBestToday;
       window.localStorage.setItem(getBestScoreKey(mode, walletAddress), String(nextBestToday));
@@ -4416,7 +4867,7 @@ export default function BobroToTheMoon({
         bestToday: nextBestToday,
         honeyLivesCollected: world.honeyLivesCollected,
         livesUsed: world.livesUsed,
-        unlockedSkinLabel: unlockedSkin?.label,
+        unlockedSkinLabels,
         saved: false,
         runId: activeRunSessionRef.current?.runId,
         weekId: activeRunSessionRef.current?.weekId,
@@ -4436,11 +4887,15 @@ export default function BobroToTheMoon({
   }, [recordRunResult]);
 
   const startRunSession = useCallback(async (): Promise<ActiveRunSession | null> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+
     try {
       const response = await fetch("/api/run/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
+        signal: controller.signal,
         body: JSON.stringify({
           wallet: mode === "holder" ? walletAddress : undefined,
           selectedSkin: selectedHead,
@@ -4449,6 +4904,10 @@ export default function BobroToTheMoon({
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          setRunSessionMessage("TOO MANY BOUNTY START ATTEMPTS. WAIT A MOMENT.");
+          return null;
+        }
         throw new Error("Run session unavailable");
       }
 
@@ -4463,17 +4922,77 @@ export default function BobroToTheMoon({
     } catch {
       setRunSessionMessage("Weekly leaderboard unavailable for this run. Local play still works.");
       return null;
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }, [mode, selectedHead, walletAddress]);
 
-  const saveRunToBountyBoard = useCallback(async () => {
-    if (!runResult || saveStatus === "saving" || runResult.saved) return;
+  const ensureActiveRunSession = useCallback(
+    async (runNonce = runNonceRef.current) => {
+      if (activeRunSessionRef.current || runSessionRequestInFlightRef.current) return;
+      if (mode !== "holder" || !walletAddress) return;
+
+      const statusAtRequest = worldRef.current.status;
+      if (statusAtRequest !== "countdown" && statusAtRequest !== "playing") return;
+
+      runSessionRequestInFlightRef.current = true;
+
+      try {
+        const runSession = await startRunSession();
+        if (!runSession || runNonce !== runNonceRef.current) return;
+
+        const currentStatus = worldRef.current.status;
+        if (currentStatus === "ready") return;
+
+        activeRunSessionRef.current = runSession;
+        setRunResult((currentResult) =>
+          currentResult && currentResult.mode === "holder" && !currentResult.runId
+            ? {
+                ...currentResult,
+                runId: runSession.runId,
+                weekId: runSession.weekId,
+                leaderboardEligible: true,
+                saved: false,
+              }
+            : currentResult,
+        );
+      } finally {
+        runSessionRequestInFlightRef.current = false;
+      }
+    },
+    [mode, startRunSession, walletAddress],
+  );
+
+  useEffect(() => {
+    if (mode !== "holder" || !walletAddress) return undefined;
+    if (hud.status !== "countdown" && hud.status !== "playing") return undefined;
+    if (activeRunSessionRef.current) return undefined;
+
+    const currentRunNonce = runNonceRef.current;
+    void ensureActiveRunSession(currentRunNonce);
+
+    const retryInterval = window.setInterval(() => {
+      if (activeRunSessionRef.current) {
+        window.clearInterval(retryInterval);
+        return;
+      }
+
+      void ensureActiveRunSession(currentRunNonce);
+    }, 3000);
+
+    return () => window.clearInterval(retryInterval);
+  }, [ensureActiveRunSession, hud.status, mode, walletAddress]);
+
+  const updateSavedBountyProfile = useCallback(async () => {
+    if (!runResult || saveStatus === "saving") return;
     if (mode !== "holder") {
       setNameError("Holder wallet required for weekly rewards.");
       return;
     }
-    if (!runResult.leaderboardEligible || !runResult.runId) {
-      setNameError("WEEKLY SESSION UNAVAILABLE. RUN AGAIN TO ENTER.");
+
+    const wallet = walletAddress || playerWallet;
+    if (!wallet) {
+      setNameError("Holder wallet required for weekly rewards.");
       return;
     }
 
@@ -4485,6 +5004,62 @@ export default function BobroToTheMoon({
 
     setPlayerName(displayName);
     setNameError("");
+    writeStoredProfile(wallet, displayName, xHandle);
+    setSaveStatus("saving");
+
+    try {
+      const response = await fetch("/api/score", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName,
+          xHandle: normalizeXHandle(xHandle) || undefined,
+          wallet,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to update profile");
+      }
+
+      setRunResult((currentResult) => (currentResult ? { ...currentResult, saved: true } : currentResult));
+      setSaveStatus("saved");
+      onScoreSubmitted();
+    } catch {
+      setSaveStatus("error");
+    }
+  }, [mode, onScoreSubmitted, playerName, playerWallet, runResult, saveStatus, walletAddress, xHandle]);
+
+  const saveRunToBountyBoard = useCallback(async (options: { fallbackToDefaultName?: boolean } = {}) => {
+    if (!runResult || saveStatus === "saving") return;
+    if (runResult.saved) {
+      await updateSavedBountyProfile();
+      return;
+    }
+    if (mode !== "holder") {
+      setNameError("Holder wallet required for weekly rewards.");
+      return;
+    }
+    if (!runResult.leaderboardEligible || !runResult.runId) {
+      setNameError("WEEKLY SESSION UNAVAILABLE. RUN AGAIN TO ENTER.");
+      return;
+    }
+
+    const wallet = walletAddress || playerWallet;
+    if (!wallet) {
+      setNameError("Holder wallet required for weekly rewards.");
+      return;
+    }
+
+    const displayName = getValidPlayerName(playerName) ?? (options.fallbackToDefaultName ? defaultPlayerName : null);
+    if (!displayName) {
+      setNameError("NO URLS ON THE BOUNTY BOARD");
+      return;
+    }
+
+    setPlayerName(displayName);
+    setNameError("");
+    writeStoredProfile(wallet, displayName, xHandle);
     setSaveStatus("saving");
 
     try {
@@ -4494,7 +5069,7 @@ export default function BobroToTheMoon({
         body: JSON.stringify({
           displayName,
           xHandle: normalizeXHandle(xHandle) || undefined,
-          wallet: walletAddress || playerWallet,
+          wallet,
           runId: runResult.runId,
           score: runResult.score,
           formattedMcap: formatMarketCap(runResult.score),
@@ -4526,7 +5101,17 @@ export default function BobroToTheMoon({
     } catch {
       setSaveStatus("error");
     }
-  }, [bobrosCount, mode, onScoreSubmitted, playerName, runResult, saveStatus, syncHud, walletAddress, xHandle]);
+  }, [bobrosCount, mode, onScoreSubmitted, playerName, playerWallet, runResult, saveStatus, syncHud, updateSavedBountyProfile, walletAddress, xHandle]);
+
+  useEffect(() => {
+    if (!runResult || runResult.saved || saveStatus !== "idle") return;
+    if (runResult.mode !== "holder" || mode !== "holder") return;
+    if (!runResult.leaderboardEligible || !runResult.runId) return;
+    if (autoSavedRunIdsRef.current.has(runResult.runId)) return;
+
+    autoSavedRunIdsRef.current.add(runResult.runId);
+    void saveRunToBountyBoard({ fallbackToDefaultName: true });
+  }, [mode, runResult, saveRunToBountyBoard, saveStatus]);
 
   const shareRunOnX = useCallback(() => {
     if (!runResult) return;
@@ -4571,6 +5156,10 @@ ${shareUrl}`;
       window.clearTimeout(countdownTimeoutRef.current);
       countdownTimeoutRef.current = undefined;
     }
+    if (countdownWatchdogTimeoutRef.current !== undefined) {
+      window.clearTimeout(countdownWatchdogTimeoutRef.current);
+      countdownWatchdogTimeoutRef.current = undefined;
+    }
   }, []);
 
   const scheduleCountdownFinish = useCallback(
@@ -4582,6 +5171,14 @@ ${shareUrl}`;
         syncHud(true);
         countdownTimeoutRef.current = undefined;
       }, Math.max(0, delaySeconds) * 1000);
+      countdownWatchdogTimeoutRef.current = window.setTimeout(() => {
+        const world = worldRef.current;
+        if (world.status === "countdown") {
+          finishCountdownWorld(world);
+          syncHud(true);
+        }
+        countdownWatchdogTimeoutRef.current = undefined;
+      }, Math.max(0, delaySeconds) * 1000 + 900);
     },
     [clearCountdownTimeout, syncHud],
   );
@@ -4593,14 +5190,33 @@ ${shareUrl}`;
   const startGame = useCallback(async () => {
     if (!assetsLoaded) return;
     if (!modeChosen) return;
+    if (isPreparingRun) return;
+
+    let preparedRunSession: ActiveRunSession | null = null;
+
+    if (mode === "holder") {
+      setIsPreparingRun(true);
+      preparedRunSession = await startRunSession();
+      setIsPreparingRun(false);
+
+      if (!preparedRunSession?.runId || !preparedRunSession.leaderboardEligible) {
+        setRunSessionMessage("BOUNTY SESSION UNAVAILABLE. TRY AGAIN BEFORE STARTING.");
+        return;
+      }
+    }
 
     const currentWorld = worldRef.current;
     startMusic("normal");
-    const runSession = await startRunSession();
     const nextWorld = createWorld(currentWorld.width, currentWorld.height, "countdown");
 
-    activeRunSessionRef.current = runSession;
+    runNonceRef.current += 1;
+    const currentRunNonce = runNonceRef.current;
+    activeRunSessionRef.current = preparedRunSession;
+    runSessionRequestInFlightRef.current = false;
     nextWorld.countdownStartedAt = nextWorld.time;
+    nextWorld.countdownStartedAtMs =
+      typeof window !== "undefined" && typeof window.performance !== "undefined" ? window.performance.now() : Date.now();
+    nextWorld.unlockBaseScore = mode === "holder" ? bestUnlockScore : Number.POSITIVE_INFINITY;
     worldRef.current = nextWorld;
     inputRef.current = { left: false, right: false };
     lastFrameTimeRef.current = null;
@@ -4609,7 +5225,25 @@ ${shareUrl}`;
     setNameError("");
     scheduleCountdownFinish(countdownDuration);
     syncHud(true);
-  }, [assetsLoaded, modeChosen, scheduleCountdownFinish, startMusic, startRunSession, syncHud]);
+
+    if (!preparedRunSession) {
+      void startRunSession().then((runSession) => {
+        if (!runSession || runNonceRef.current !== currentRunNonce || worldRef.current !== nextWorld) return;
+
+        activeRunSessionRef.current = runSession;
+        setRunResult((currentResult) =>
+          currentResult && !currentResult.runId
+            ? {
+                ...currentResult,
+                runId: runSession.runId,
+                weekId: runSession.weekId,
+                leaderboardEligible: currentResult.mode === "holder" ? runSession.leaderboardEligible : currentResult.leaderboardEligible,
+              }
+            : currentResult,
+        );
+      });
+    }
+  }, [assetsLoaded, bestUnlockScore, isPreparingRun, mode, modeChosen, scheduleCountdownFinish, startMusic, startRunSession, syncHud]);
 
   useEffect(() => {
     if (!autoStartGuestRunRef.current) return;
@@ -4618,6 +5252,32 @@ ${shareUrl}`;
     autoStartGuestRunRef.current = false;
     void startGame();
   }, [assetsLoaded, mode, modeChosen, startGame]);
+
+  useEffect(() => {
+    if (hud.status !== "countdown") return undefined;
+
+    const watchdog = window.setInterval(() => {
+      const world = worldRef.current;
+      if (world.status !== "countdown") {
+        window.clearInterval(watchdog);
+        return;
+      }
+
+      const nowMs =
+        typeof window !== "undefined" && typeof window.performance !== "undefined" ? window.performance.now() : Date.now();
+      const wallElapsed = world.countdownStartedAtMs > 0 ? (nowMs - world.countdownStartedAtMs) / 1000 : 0;
+
+      if (wallElapsed >= countdownDuration + 0.25) {
+        finishCountdownWorld(world);
+        syncHud(true);
+        return;
+      }
+
+      syncHud(true);
+    }, 250);
+
+    return () => window.clearInterval(watchdog);
+  }, [hud.status, syncHud]);
 
   useEffect(() => {
     const musicMode = getMusicModeForStage(hud.stage);
@@ -4751,6 +5411,8 @@ ${shareUrl}`;
   );
 
   useEffect(() => {
+    if (!assetsLoaded) return undefined;
+
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
 
@@ -4759,6 +5421,7 @@ ${shareUrl}`;
 
     let activeFrameMs = canvasFrameMsDesktop;
     let idleFrameMs = canvasIdleFrameMsDesktop;
+    let canvasLoopErrorLogged = false;
 
     const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -4779,7 +5442,15 @@ ${shareUrl}`;
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       resizeWorld(worldRef.current, nextWidth, nextHeight, performanceProfile.performanceMode);
-      drawWorld(context, worldRef.current, assetsRef.current, selectedHead);
+      try {
+        drawWorld(context, worldRef.current, assetsRef.current, selectedHeadRef.current);
+      } catch (error) {
+        if (!canvasLoopErrorLogged) {
+          canvasLoopErrorLogged = true;
+          console.warn("BOBRO canvas draw fallback", error);
+        }
+        drawEmergencyWorld(context, worldRef.current);
+      }
       syncHud(true);
     };
 
@@ -4788,7 +5459,10 @@ ${shareUrl}`;
     const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(syncCanvasSize);
     resizeObserver?.observe(canvas);
 
+    let isCanvasLoopRunning = true;
     const tick = (time: number) => {
+      if (!isCanvasLoopRunning) return;
+
       const world = worldRef.current;
       const isActiveRun = world.status === "playing" || world.status === "countdown";
       const targetFrameMs = isActiveRun ? activeFrameMs : idleFrameMs;
@@ -4802,22 +5476,40 @@ ${shareUrl}`;
       const deltaSeconds = Math.min(0.034, Math.max(0, (time - previousTime) / 1000));
       lastFrameTimeRef.current = time;
 
-      updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCue);
-      drawWorld(context, world, assetsRef.current, selectedHead);
+      try {
+        updateWorld(world, inputRef.current, deltaSeconds, recordRunRef.current, playAudioCueRef.current);
+        drawWorld(context, world, assetsRef.current, selectedHeadRef.current);
+      } catch (error) {
+        if (!canvasLoopErrorLogged) {
+          canvasLoopErrorLogged = true;
+          console.warn("BOBRO canvas loop fallback", error);
+        }
+        drawEmergencyWorld(context, world);
+      }
       syncHud();
 
       animationFrameRef.current = window.requestAnimationFrame(tick);
     };
 
     animationFrameRef.current = window.requestAnimationFrame(tick);
+    const loopHeartbeat = window.setInterval(() => {
+      if (!isCanvasLoopRunning) return;
+      const world = worldRef.current;
+      if (world.status !== "playing" && world.status !== "countdown") return;
+      if (animationFrameRef.current !== null) return;
+
+      animationFrameRef.current = window.requestAnimationFrame(tick);
+    }, 1000);
 
     return () => {
+      isCanvasLoopRunning = false;
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
       }
+      window.clearInterval(loopHeartbeat);
       resizeObserver?.disconnect();
     };
-  }, [playAudioCue, selectedHead, syncHud]);
+  }, [assetsLoaded, syncHud]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -4903,7 +5595,7 @@ ${shareUrl}`;
         : `BEST TODAY ${formatMarketCap(result.previousBestToday)}`
       : "FIRST RUN TODAY"
     : "";
-  const saveButtonLabel = saveStatus === "saving" ? "SAVING..." : runResult?.saved || saveStatus === "saved" ? "SAVED TO BOUNTY BOARD" : "SAVE TO BOUNTY BOARD";
+  const saveButtonLabel = saveStatus === "saving" ? "SAVING..." : runResult?.saved || saveStatus === "saved" ? "UPDATE NAME" : "SAVE TO BOUNTY BOARD";
   const effectiveUnlockScore = mode === "holder" ? bestUnlockScore : 0;
   const walletShort = walletAddress ? shortenWallet(walletAddress) : "";
   const isHolderMode = mode === "holder";
@@ -4921,19 +5613,36 @@ ${shareUrl}`;
         : modeChosen && mode === "guest"
           ? "GUEST RUN READY"
           : "";
+  const visibleHolderStatusLabel = isHolderMode ? `BOBRO DETECTED: ${bobrosCount}` : holderStatusLabel;
+
+  if (!assetsLoaded) {
+    return (
+      <section className={styles.gamePreloader} aria-label="Loading BOBRO TO THE MOON assets" aria-live="polite">
+        <div className={styles.preloaderPanel}>
+          <img src="/assets/logo.png" alt="BOBROS" />
+          <span>BOBRO TO THE MOON</span>
+          <strong>{Math.max(0, Math.min(100, loadProgress))}%</strong>
+          <div className={styles.preloaderTrack} aria-hidden="true">
+            <i style={{ width: `${Math.max(0, Math.min(100, loadProgress))}%` }} />
+          </div>
+          <small>{loadMessage}</small>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className={styles.gameCabinet} aria-label="BOBRO TO THE MOON game frame">
+    <section className={`${styles.gameCabinet} ${hud.status === "ready" ? styles.lobbyCabinet : ""}`} aria-label="BOBRO TO THE MOON game frame">
       <div
         className={`${styles.gameHud} ${hud.multiplier > 1 ? styles.gameHudBoosted : ""} ${hud.milestoneActive ? styles.gameHudMilestone : ""} ${hud.statusLabels.includes("INTOXICATED") ? styles.gameHudIntoxicated : ""
           }`}
         aria-live="polite"
       >
+        <a className={styles.hudLogo} href="/" aria-label="Back to BOBROS home">
+          <img src="/assets/logo.png" alt="BOBROS" />
+        </a>
         <span className={styles.hudCell}>
           BOBO MCAP <strong>{formatMarketCap(hud.score)}</strong>
-        </span>
-        <span className={styles.hudCell}>
-          TODAY <strong>{formatMarketCap(hud.bestToday)}</strong>
         </span>
         <span className={styles.hudCell}>
           ZONE <strong>{hud.stage}</strong>
@@ -4944,15 +5653,24 @@ ${shareUrl}`;
         <span className={styles.hudCell}>
           HONEY <strong>x{hud.lives}/{honeyLifeMax}</strong>
         </span>
-      </div>
-      {hud.statusLabels.length > 0 ? (
-        <div className={styles.statusBadges} aria-label="Active game statuses">
-          {hud.statusLabels.map((label) => (
-            <span key={label}>{label}</span>
-          ))}
+        <div className={styles.hudIconGroup} aria-label="Game utility controls">
+          <button
+            className={styles.hudIconButton}
+            type="button"
+            onClick={toggleAudioMuted}
+            aria-pressed={audioMuted}
+            aria-label={audioMuted ? "Unmute game audio" : "Mute game audio"}
+          >
+            <SoundHudIcon muted={audioMuted} />
+          </button>
+          <a className={styles.hudIconButton} href="/" aria-label="Back to Bobros homepage">
+            <HomeHudIcon />
+          </a>
+          <span className={styles.hudIconButton} aria-label="How to play">
+            <HelpHudIcon />
+          </span>
         </div>
-      ) : null}
-
+      </div>
       <div className={styles.canvasWrap}>
         <canvas
           ref={canvasRef}
@@ -4972,16 +5690,30 @@ ${shareUrl}`;
           aria-pressed={audioMuted}
           aria-label={audioMuted ? "Unmute game audio" : "Mute game audio"}
         >
-          {audioMuted ? "MUTED" : "SOUND ON"}
+          <SoundHudIcon muted={audioMuted} />
         </button>
 
-        {hud.bonusLabel ? <div className={styles.bonusNotice}>{hud.bonusLabel}</div> : null}
+        {hud.arcadeEvents.length > 0 ? (
+          <div className={styles.arcadeEventFeed} aria-live="polite" aria-label="Arcade event feed">
+            {hud.arcadeEvents.map((event) => (
+              <div className={`${styles.arcadeEvent} ${getArcadeEventToneClass(event.tone)}`} key={event.id}>
+                <span className={styles.arcadeEventIcon} aria-hidden="true">
+                  {event.icon}
+                </span>
+                <span className={styles.arcadeEventCopy}>
+                  <strong>{event.text}</strong>
+                  <small>{event.subtitle}</small>
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {hud.status !== "playing" ? (
           <div className={`${styles.gameOverlay} ${hud.status === "dead" ? styles.deathOverlay : ""}`}>
             <span>
               {hud.status === "dead"
-                ? "RUN ENDED"
+                ? "MISSION REPORT"
                 : hud.status === "paused"
                   ? "PAUSED"
                   : hud.status === "countdown"
@@ -4992,7 +5724,7 @@ ${shareUrl}`;
             </span>
             <h2>
               {hud.status === "dead"
-                ? hud.deathMessage
+                ? "RUN SUMMARY"
                 : hud.status === "paused"
                   ? "HOLD"
                   : hud.status === "countdown"
@@ -5001,9 +5733,7 @@ ${shareUrl}`;
             </h2>
             <p>
               {hud.status === "dead"
-                ? result?.mode === "holder"
-                  ? "SAVE YOUR WEEKLY RUN, FLEX THE RECEIPT, OR RUN IT BACK."
-                  : "GUEST SCORE SAVED LOCALLY. FLEX THE RECEIPT OR RUN IT BACK."
+                ? hud.deathMessage
                 : hud.status === "paused"
                   ? "ESC OR P TO RESUME."
                   : hud.status === "countdown"
@@ -5012,21 +5742,55 @@ ${shareUrl}`;
             </p>
             {hud.status === "ready" ? (
               <div className={styles.readyMenu} aria-label="BOBRO TO THE MOON start menu">
-                <div className={styles.menuAccessPanel}>
-                  <div className={styles.menuIntro}>
-                    <span>HOLDER SCORES ENTER THE WEEKLY BOUNTY BOARD</span>
-                    <div className={styles.prizeStrip} aria-label="Weekly contest rewards">
-                      <b>#1 WINS BOBROS NFT</b>
-                      <b>TOP 3 GET WHITELIST</b>
-                      <b>HOLDER REWARDS</b>
+                <div className={styles.menuSkinPanel}>
+                  <div className={styles.skinSelector} aria-label="Choose your Bobro">
+                    <strong className={styles.skinTitle}>BOBRO LOCKER</strong>
+                    <small className={styles.skinSubtitle}>SELECT YOUR SKIN</small>
+                    <div className={styles.skinGrid}>
+                      {headOptions.map((head) => {
+                        const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";
+
+                        return (
+                          <button
+                            className={`${styles.skinButton} ${selectedHead === head.key ? styles.skinButtonSelected : ""} ${unlocked ? "" : styles.skinButtonLocked}`}
+                            type="button"
+                            key={head.key}
+                            onClick={() => selectHead(head.key)}
+                            aria-pressed={selectedHead === head.key}
+                            disabled={!unlocked}
+                          >
+                            <img className={styles.skinPreview} src={head.src} alt="" aria-hidden="true" />
+                            <span>{head.label}</span>
+                            <small className={styles.skinUnlock}>
+                              {unlocked
+                                ? selectedHead === head.key
+                                  ? "EQUIPPED"
+                                  : "UNLOCKED"
+                                : mode === "holder"
+                                  ? formatMcap(head.unlockAt)
+                                  : "LOCKED"}
+                            </small>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+                </div>
 
-                 
+                  <div className={styles.menuAccessPanel}>
+                    <div className={styles.menuIntro}>
+                      <span>GAME ENTRY</span>
+                      <strong>SELECT RUN TYPE</strong>
+                    </div>
 
+                  <div className={styles.holderRunCard}>
+                    <div className={styles.runCardHeader}>
+                      <strong>HOLDER RUN</strong>
+                      <small>Leaderboard + unlock progression</small>
+                    </div>
                   <div className={styles.holderTerminal} aria-label="Holder wallet check">
                     <label className={styles.walletEntry}>
-                      <span>VERIFY HOLDER ADDRESS FOR WEEKLY REWARDS</span>
+                      <span>Paste wallet address</span>
                       <div>
                         <input
                           type="text"
@@ -5054,54 +5818,37 @@ ${shareUrl}`;
                       </div>
                     </label>
                     
-                    {holderStatusLabel ? <small className={styles.statusPill}>{holderStatusLabel}</small> : null}
+                    {visibleHolderStatusLabel ? <small className={styles.statusPill}>{visibleHolderStatusLabel}</small> : null}
                     {accessMessage ? (
                       <small className={walletStatus === "denied" || walletStatus === "error" ? styles.formError : styles.saveConfirmation}>{accessMessage}</small>
                     ) : null}
                   </div>
                   <button
-                    className={`${styles.startButton} ${modeChosen ? styles.bountyRunButton : styles.primaryRunButton}`}
+                    className={`${styles.startButton} ${styles.bountyRunButton}`}
                     type="button"
-                    onClick={modeChosen ? startGame : startGuestRunFromMenu}
-                    disabled={modeChosen && !assetsLoaded}
+                    onClick={startGame}
+                    disabled={!isHolderMode || !assetsLoaded || isPreparingRun}
                   >
-                    {modeChosen && !assetsLoaded ? "LOADING GAME ASSETS" : modeChosen ? readyStartLabel : "START GUEST RUN"}
+                    {!assetsLoaded ? "LOADING GAME ASSETS" : isPreparingRun ? "PREPARING BOUNTY RUN..." : isHolderMode ? readyStartLabel : "VERIFY TO UNLOCK"}
                   </button>
+                  {runSessionMessage && isHolderMode ? <small className={styles.formError}>{runSessionMessage}</small> : null}
                 </div>
 
-                <div className={styles.menuSkinPanel}>
-                  <div className={styles.skinSelector} aria-label="Choose your Bobro">
-                    <strong className={styles.skinTitle}>SELECT BOBRO</strong>
-                    <div className={styles.skinGrid}>
-                      {headOptions.map((head) => {
-                        const unlocked = mode === "holder" ? effectiveUnlockScore >= head.unlockAt : head.key === "bobro-head";
+                  <div className={styles.orDivider}><span>OR</span></div>
 
-                        return (
-                          <button
-                            className={`${styles.skinButton} ${selectedHead === head.key ? styles.skinButtonSelected : ""} ${unlocked ? "" : styles.skinButtonLocked}`}
-                            type="button"
-                            key={head.key}
-                            onClick={() => selectHead(head.key)}
-                            aria-pressed={selectedHead === head.key}
-                            disabled={!unlocked}
-                          >
-                            <img className={styles.skinPreview} src={head.src} alt="" aria-hidden="true" />
-                            <span>{head.label}</span>
-                            <small className={styles.skinUnlock}>
-                              {unlocked
-                                ? selectedHead === head.key
-                                  ? "SELECTED"
-                                  : mode === "holder"
-                                    ? "UNLOCKED"
-                                    : "DEFAULT"
-                                : mode === "holder"
-                                  ? formatMcap(head.unlockAt)
-                                  : "LOCKED"}
-                            </small>
-                          </button>
-                        );
-                      })}
+                  <div className={styles.guestRunCard}>
+                    <div className={styles.runCardHeader}>
+                      <strong>GUEST RUN</strong>
+                      <small>Local score only / default skin only</small>
                     </div>
+                    <button
+                      className={`${styles.startButton} ${styles.primaryRunButton}`}
+                      type="button"
+                      onClick={startGuestRunFromMenu}
+                      disabled={!assetsLoaded}
+                    >
+                      {!assetsLoaded ? "LOADING GAME ASSETS" : "START GUEST RUN"}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -5130,20 +5877,20 @@ ${shareUrl}`;
                     <dd>{result.honeyLivesCollected} EXTRA / {result.livesUsed} SAVES</dd>
                   </div>
                 </dl>
-             {result.mode === "holder" ? (
-  <>
-    <label className={styles.nameEntry}>
-      <span>ENTER YOUR NAME</span>
-      <input
-        type="text"
-        inputMode="text"
-        maxLength={16}
-        value={playerName}
-        onChange={(event) => updatePlayerName(event.target.value)}
-        onBlur={commitPlayerName}
-        aria-invalid={Boolean(nameError)}
-      />
-    </label>
+                {result.mode === "holder" ? (
+                  <div className={styles.profileEntryPanel} aria-label="Bounty board profile">
+                    <label className={styles.nameEntry}>
+                      <span>PLAYER NAME</span>
+                      <input
+                        type="text"
+                        inputMode="text"
+                        maxLength={16}
+                        value={playerName}
+                        onChange={(event) => updatePlayerName(event.target.value)}
+                        onBlur={commitPlayerName}
+                        aria-invalid={Boolean(nameError)}
+                      />
+                    </label>
 
                     <label className={`${styles.nameEntry} ${styles.socialEntry}`}>
                       <span>X HANDLE</span>
@@ -5156,24 +5903,65 @@ ${shareUrl}`;
                         placeholder="optional"
                       />
                     </label>
-  </>
-) : (
-  <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
-)}
+                  </div>
+                ) : (
+                  <div className={styles.postDeathVerify} aria-label="Verify holder wallet after run">
+                    <strong>CLAIM THIS RUN</strong>
+                    <small>Paste a holder wallet to save this score.</small>
+                    <label className={styles.walletEntry}>
+                      <span>Paste wallet address</span>
+                      <div>
+                        <input
+                          type="text"
+                          inputMode="text"
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder="PASTE HOLDER WALLET ADDRESS"
+                          value={manualWalletAddress}
+                          onChange={(event) => setManualWalletAddress(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void checkEnteredWalletAddress();
+                            }
+                          }}
+                        />
+                        <button
+                          className={styles.startButton}
+                          type="button"
+                          onClick={checkEnteredWalletAddress}
+                          disabled={walletStatus === "checking"}
+                        >
+                          {walletStatus === "checking" ? "..." : "VERIFY"}
+                        </button>
+                      </div>
+                    </label>
+                    <small className={styles.guestNote}>Holder wallet required for weekly rewards.</small>
+                  </div>
+                )}
                 
                 {nameError ? <small className={styles.formError}>{nameError}</small> : null}
                 {runSessionMessage && !result.leaderboardEligible ? <small className={styles.formError}>{runSessionMessage}</small> : null}
                 {result.mode === "holder" && result.leaderboardEligible ? (
                   <small className={styles.guestNote}>Weekly leaderboard entries are reviewed before rewards are distributed.</small>
                 ) : null}
-                {result.unlockedSkinLabel ? <small className={styles.unlockToast}>UNLOCKED {result.unlockedSkinLabel}</small> : null}
-                {saveStatus === "saved" ? <small className={styles.saveConfirmation}>SAVED TO BOUNTY BOARD</small> : null}
+                {result.unlockedSkinLabels.length > 0 ? (
+                  <div className={styles.runUnlockSummary} aria-label="New skin unlocks this run">
+                    <strong>NEW UNLOCKS THIS RUN</strong>
+                    <div>
+                      {result.unlockedSkinLabels.map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {saveStatus === "saved" || result.saved ? <small className={styles.saveConfirmation}>SCORE SAVED · NAME CAN BE UPDATED</small> : null}
                 {saveStatus === "error" ? <small className={styles.formError}>SAVE FAILED. TRY AGAIN.</small> : null}
               </div>
             ) : null}
             {hud.status === "dead" && result ? (
               <div className={styles.deathActions}>
-                <button className={styles.startButton} type="button" onClick={saveRunToBountyBoard} disabled={!canSaveRun || saveStatus === "saving" || result.saved}>
+                <button className={styles.startButton} type="button" onClick={() => void saveRunToBountyBoard()} disabled={!canSaveRun || saveStatus === "saving"}>
                   {canSaveRun ? saveButtonLabel : "HOLDER WALLET REQUIRED"}
                 </button>
                 <button className={styles.startButton} type="button" onClick={shareRunOnX}>
@@ -5186,14 +5974,26 @@ ${shareUrl}`;
                   RUN AGAIN
                 </button>
               </div>
+            ) : hud.status === "paused" ? (
+              <div className={styles.pauseActions} aria-label="Paused game actions">
+                <button className={`${styles.startButton} ${styles.pauseResumeButton}`} type="button" onClick={togglePause}>
+                  RESUME
+                </button>
+                <a className={`${styles.startButton} ${styles.pauseHomeButton}`} href="/">
+                  HOME
+                </a>
+                <button className={`${styles.startButton} ${styles.pauseRestartButton}`} type="button" onClick={returnToStartScreen}>
+                  RUN AGAIN
+                </button>
+              </div>
             ) : hud.status !== "ready" && hud.status !== "countdown" && modeChosen ? (
               <button
                 className={styles.startButton}
                 type="button"
-                onClick={hud.status === "paused" ? togglePause : startGame}
-                disabled={!assetsLoaded && hud.status !== "paused"}
+                onClick={startGame}
+                disabled={!assetsLoaded}
               >
-                {!assetsLoaded ? "LOADING GAME ASSETS" : hud.status === "dead" ? "RESTART" : hud.status === "paused" ? "RESUME" : "START RUN"}
+                {!assetsLoaded ? "LOADING GAME ASSETS" : "START RUN"}
               </button>
             ) : null}
           </div>
@@ -5202,17 +6002,21 @@ ${shareUrl}`;
 
       <span className={styles.gameCredit}>bobro to the moon v1.0</span>
 
-      <div className={styles.gameActions}>
-        <button
-          className={styles.pauseButton}
-          type="button"
-          onClick={togglePause}
-          disabled={hud.status === "ready" || hud.status === "dead"}
-          aria-label={hud.status === "paused" ? "Resume game" : "Pause game"}
-        >
-          {hud.status === "paused" ? "RESUME" : "PAUSE"}
-        </button>
-      </div>
+      {hud.status === "playing" || hud.status === "countdown" ? (
+        <div className={styles.gameActions}>
+          <button
+            className={styles.pauseButton}
+            type="button"
+            onClick={togglePause}
+            aria-label="Pause game"
+          >
+            PAUSE
+          </button>
+          <button className={styles.mobileBountyButton} type="button" onClick={onOpenLeaderboard}>
+            BOUNTY
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.controlsHint}>A/D OR ARROWS. TAP LEFT/RIGHT HALF ON MOBILE.</div>
     </section>

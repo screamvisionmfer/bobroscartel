@@ -1,4 +1,4 @@
-import { getRedis } from "./redis";
+import { getRedis, withRedisTimeout } from "./redis";
 
 type RateLimitRecord = {
   count: number;
@@ -46,17 +46,17 @@ export async function checkRateLimit({
   }
 
   const rateLimitKey = `bobros:rate:${namespace}:${key}`;
-  const count = await redis.incr(rateLimitKey);
+  const count = await withRedisTimeout(redis.incr(rateLimitKey));
 
   if (count === 1) {
-    await redis.pexpire(rateLimitKey, windowMs);
+    await withRedisTimeout(redis.pexpire(rateLimitKey, windowMs));
   }
 
   if (count <= limit) {
     return { limited: false, retryAfterSeconds: 0 };
   }
 
-  const ttl = await redis.pttl(rateLimitKey);
+  const ttl = await withRedisTimeout(redis.pttl(rateLimitKey));
 
   return {
     limited: true,

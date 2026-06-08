@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BobroToTheMoon from "./BobroToTheMoon";
 import Leaderboard from "./Leaderboard";
 import styles from "./Game.module.css";
+
+type ShellGameStatus = "loading" | "ready" | "countdown" | "playing" | "paused" | "dead";
 
 export default function GameShell() {
   const [leaderboardVersion, setLeaderboardVersion] = useState(0);
   const [holderWallet, setHolderWallet] = useState("");
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [gameStatus, setGameStatus] = useState<ShellGameStatus>("loading");
 
   const leaderboard = <Leaderboard refreshKey={leaderboardVersion} walletAddress={holderWallet} />;
+  const showMobileLeaderboardButton = gameStatus === "ready";
+
+  useEffect(() => {
+    if (gameStatus === "loading" || gameStatus === "paused" || gameStatus === "dead") {
+      setLeaderboardOpen(false);
+    }
+  }, [gameStatus]);
 
   return (
     <main className={`page-shell ${styles.gamePage}`}>
@@ -27,7 +37,7 @@ export default function GameShell() {
         </a>
         <div>
           <h1>BOBRO TO THE MOON</h1>
-          <p>Weekly jumper. Holder scores hit the bounty board.</p>
+          <p>Holder scores enter the weekly bounty board.</p>
         </div>
         <a className={styles.backLink} href="/">
           BACK TO SITE
@@ -38,20 +48,24 @@ export default function GameShell() {
         <BobroToTheMoon
           onScoreSubmitted={() => setLeaderboardVersion((current) => current + 1)}
           onAccessChange={(access) => setHolderWallet(access.mode === "holder" ? access.wallet ?? "" : "")}
+          onStatusChange={setGameStatus}
+          onOpenLeaderboard={() => setLeaderboardOpen(true)}
         />
 
         <div className={styles.leaderboardSidebar}>{leaderboard}</div>
       </section>
 
-      <button
-        className={styles.leaderboardMobileOpen}
-        type="button"
-        onClick={() => setLeaderboardOpen(true)}
-        aria-haspopup="dialog"
-        aria-expanded={leaderboardOpen}
-      >
-        BOUNTY BOARD
-      </button>
+      {showMobileLeaderboardButton ? (
+        <button
+          className={styles.leaderboardMobileOpen}
+          type="button"
+          onClick={() => setLeaderboardOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={leaderboardOpen}
+        >
+          BOUNTY
+        </button>
+      ) : null}
 
       {leaderboardOpen ? (
         <div className={styles.leaderboardModal} role="dialog" aria-modal="true" aria-label="Weekly bounty board">
@@ -60,7 +74,7 @@ export default function GameShell() {
             <div className={styles.leaderboardModalTop}>
               <strong>BOUNTY BOARD</strong>
               <button type="button" onClick={() => setLeaderboardOpen(false)}>
-                × BACK TO GAME
+                X CLOSE
               </button>
             </div>
             <div className={styles.leaderboardModalScroll}>

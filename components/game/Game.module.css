@@ -69,6 +69,87 @@
   animation-delay: -7s;
 }
 
+.gamePreloader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  color: #f7f2df;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(143, 255, 45, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(15, 6, 20, 0.92), rgba(0, 0, 0, 0.98)),
+    #050505;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  animation: preloaderFadeIn 260ms ease both;
+}
+
+.preloaderPanel {
+  width: min(25rem, 92vw);
+  display: grid;
+  justify-items: center;
+  gap: 0.72rem;
+  padding: clamp(1rem, 4vw, 1.55rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(179, 87, 255, 0.18), transparent 36%),
+    rgba(5, 6, 8, 0.84);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.72),
+    inset 0 0 0 1px rgba(143, 255, 45, 0.1);
+}
+
+.preloaderPanel img {
+  width: min(11rem, 58vw);
+  height: auto;
+  filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.4));
+}
+
+.preloaderPanel span {
+  color: #8dde3e;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.preloaderPanel strong {
+  color: #f7f2df;
+  font-size: clamp(2.4rem, 10vw, 4.8rem);
+  line-height: 0.9;
+  text-shadow: 4px 5px 0 #000;
+}
+
+.preloaderTrack {
+  width: 100%;
+  height: 0.82rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.58);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.44);
+}
+
+.preloaderTrack i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, #8dde3e, #f2c73a 60%, #b357ff);
+  transition: width 220ms ease;
+}
+
+.preloaderPanel small {
+  min-height: 1em;
+  color: rgba(247, 242, 223, 0.7);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
 .primaryButton,
 .startButton,
 .pauseButton {
@@ -103,6 +184,14 @@
 .gameLogoLink img {
   width: 100%;
   height: auto;
+}
+
+.topBarActions {
+  display: none;
+}
+
+.mobileBountyButton {
+  display: none;
 }
 
 .gameHeaderStrip h1 {
@@ -169,6 +258,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(300px, 350px);
   align-items: stretch;
   gap: clamp(0.65rem, 1.5vw, 1rem);
+  transition: width 520ms cubic-bezier(0.2, 0.8, 0.2, 1), grid-template-columns 520ms cubic-bezier(0.2, 0.8, 0.2, 1), gap 420ms ease;
 }
 
 .gatedGame {
@@ -289,6 +379,8 @@
     rgba(255, 255, 255, 0.24);
   outline: 2px dashed rgba(0, 0, 0, 0.2);
   outline-offset: -8px;
+  transition: background 520ms ease, box-shadow 520ms ease, outline-color 520ms ease, padding 420ms ease;
+  animation: gameCabinetReveal 260ms ease both;
 }
 
 .gameHud {
@@ -304,6 +396,11 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08)),
     rgba(255, 255, 255, 0.18);
+}
+
+.hudLogo,
+.hudIconGroup {
+  display: none;
 }
 
 .hudCell {
@@ -381,6 +478,7 @@
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.2),
     0 9px 0 rgba(0, 0, 0, 0.1);
+  transition: border-color 520ms ease, box-shadow 520ms ease, background 520ms ease, transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .canvasWrap::after {
@@ -422,7 +520,8 @@
   right: 0.48rem;
   z-index: 6;
   min-height: 1.9rem;
-  min-width: 5.4rem;
+  min-width: 2.35rem;
+  width: 2.35rem;
   padding: 0.32rem 0.52rem;
   border: 2px solid var(--border);
   border-radius: 999px;
@@ -436,26 +535,177 @@
   text-transform: uppercase;
 }
 
+.soundToggle svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
 .soundToggle:hover {
   transform: translateY(-1px);
   box-shadow: 0 5px 0 rgba(91, 72, 31, 0.34);
 }
 
-.bonusNotice {
+.arcadeEventFeed {
   position: absolute;
+  top: clamp(0.55rem, 1.4vh, 0.82rem);
   left: 50%;
-  top: 1rem;
   translate: -50% 0;
-  z-index: 2;
-  width: min(90%, 30rem);
-  padding: 0.55rem 0.7rem;
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  color: #090909;
-  background: var(--game-green);
-  box-shadow: 0 6px 0 rgba(91, 72, 31, 0.32);
-  text-align: center;
+  z-index: 7;
+  width: min(23rem, calc(100% - 1.4rem));
+  display: grid;
+  pointer-events: none;
+}
+
+.arcadeEvent {
+  --event-accent: #77d4ff;
+  position: relative;
+  min-height: 2.75rem;
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.72rem 0.38rem 0.48rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--event-accent) 60%, rgba(255, 255, 255, 0.12));
+  border-left-width: 4px;
+  border-radius: 11px;
+  color: #f7f2df;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--event-accent) 12%, transparent), transparent 64%),
+    rgba(3, 4, 6, 0.76);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 8px 18px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(1px);
+  font-size: clamp(0.72rem, 1.75vw, 0.94rem);
+  line-height: 1;
   text-transform: uppercase;
+  text-shadow:
+    1px 1px 0 #000,
+    0 0 8px color-mix(in srgb, var(--event-accent) 22%, transparent);
+  animation: arcadeEventSlide 3400ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.arcadeEvent::before,
+.arcadeEvent::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.arcadeEvent::before {
+  inset: 0.18rem;
+  border: 1px dashed color-mix(in srgb, var(--event-accent) 34%, transparent);
+  border-radius: 8px;
+  opacity: 0.38;
+}
+
+.arcadeEvent::after {
+  right: -2.8rem;
+  top: -1.6rem;
+  width: 6rem;
+  height: 5rem;
+  rotate: -12deg;
+  background:
+    linear-gradient(135deg, transparent 0 32%, color-mix(in srgb, var(--event-accent) 22%, transparent) 32% 42%, transparent 42% 52%, color-mix(in srgb, var(--event-accent) 12%, transparent) 52% 62%, transparent 62%);
+  opacity: 0.36;
+}
+
+.arcadeEventCopy {
+  min-width: 0;
+  display: grid;
+  gap: 0.24rem;
+  overflow: hidden;
+}
+
+.arcadeEventCopy strong,
+.arcadeEventCopy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arcadeEventCopy strong {
+  color: var(--event-accent);
+  font-size: 1em;
+  line-height: 0.95;
+}
+
+.arcadeEventCopy small {
+  color: #f7f2df;
+  font-size: 0.48em;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.arcadeEventIcon {
+  color: var(--event-accent);
+  width: 1.82rem;
+  height: 1.82rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--event-accent) 58%, rgba(255, 255, 255, 0.18));
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.14), transparent 42%),
+    rgba(0, 0, 0, 0.56);
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.24),
+    0 0 10px color-mix(in srgb, var(--event-accent) 16%, transparent);
+  font-size: 1rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.arcadeEventPositive {
+  --event-accent: #8dde3e;
+}
+
+.arcadeEventZone {
+  --event-accent: #b45cff;
+}
+
+.arcadeEventDanger {
+  --event-accent: #ff4f5c;
+}
+
+.arcadeEventReward {
+  --event-accent: #e4b745;
+}
+
+.arcadeEventInfo {
+  --event-accent: #77d4ff;
+}
+
+@media (max-width: 700px) {
+  .arcadeEventFeed {
+    top: 0.42rem;
+    width: min(18rem, calc(100% - 0.8rem));
+  }
+
+  .arcadeEvent {
+    min-height: 2.45rem;
+    grid-template-columns: 1.95rem minmax(0, 1fr);
+    gap: 0.4rem;
+    padding: 0.34rem 0.54rem 0.32rem 0.4rem;
+    border-radius: 10px;
+    font-size: clamp(0.66rem, 3.2vw, 0.82rem);
+  }
+
+  .arcadeEventIcon {
+    width: 1.58rem;
+    height: 1.58rem;
+    font-size: 0.88rem;
+  }
+
+  .arcadeEventCopy {
+    gap: 0.18rem;
+  }
 }
 
 .gameOverlay {
@@ -572,6 +822,43 @@
 .bountyRunButton {
   background: var(--game-yellow);
   box-shadow: 0 8px 0 rgba(91, 72, 31, 0.34);
+}
+
+.holderRunCard,
+.guestRunCard {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.runCardHeader {
+  display: grid;
+  gap: 0.12rem;
+  text-align: left;
+}
+
+.runCardHeader strong {
+  color: #416c2d;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.runCardHeader small,
+.skinSubtitle {
+  color: rgba(33, 22, 15, 0.66);
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.orDivider {
+  display: grid;
+  place-items: center;
+  color: rgba(33, 22, 15, 0.7);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .holderTerminal {
@@ -994,6 +1281,17 @@
   box-shadow: 0 0 0 3px rgba(242, 199, 58, 0.38);
 }
 
+.profileEntryPanel {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 255, 0.22);
+}
+
 .formError,
 .saveConfirmation {
   justify-self: center;
@@ -1024,6 +1322,64 @@
   animation: hudPaperPulse 560ms ease-in-out infinite alternate;
 }
 
+.runUnlockSummary {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.52rem;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  background: rgba(143, 255, 45, 0.14);
+}
+
+.runUnlockSummary > strong {
+  color: #416c2d;
+  font-size: 0.62rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.runUnlockSummary > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+}
+
+.runUnlockSummary span {
+  padding: 0.24rem 0.42rem;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  border-radius: 999px;
+  color: #090909;
+  background: var(--game-green);
+  box-shadow: 0 4px 0 rgba(33, 22, 15, 0.18);
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.postDeathVerify {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.5rem;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.postDeathVerify strong {
+  color: #416c2d;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.postDeathVerify small {
+  color: rgba(33, 22, 15, 0.66);
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
 
 .deathActions {
   width: min(100%, 27rem);
@@ -1208,7 +1564,7 @@
 
 .leaderboardRow {
   display: grid;
-  grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.1rem 2.75rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.46rem;
   padding: 0.42rem 0.5rem;
@@ -1222,7 +1578,7 @@
 .leaderboardRow div {
   min-width: 0;
   display: grid;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .leaderboardRow span,
@@ -1235,6 +1591,7 @@
 .leaderboardRow span {
   color: var(--game-ink);
   font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .leaderboardRow small {
@@ -1248,6 +1605,34 @@
   font-size: 0.78rem;
   text-align: right;
   white-space: nowrap;
+}
+
+.leaderboardAvatar {
+  width: 2.55rem;
+  height: 2.55rem;
+  object-fit: contain;
+  border: 2px solid rgba(0, 0, 0, 0.62);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(143, 255, 45, 0.2), transparent 58%),
+    rgba(255, 255, 255, 0.24);
+  box-shadow: 0 4px 0 rgba(33, 22, 15, 0.16);
+}
+
+.xHandleText {
+  overflow: hidden;
+  color: #6a3cbf;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.xHandleText:hover {
+  text-decoration: underline;
 }
 
 .leaderboardEmpty {
@@ -1296,6 +1681,645 @@
   color: rgba(33, 22, 15, 0.62);
   font-size: 0.62rem;
   line-height: 1.35;
+}
+
+@media (min-width: 981px) {
+  .gamePage {
+    --game-card: rgba(9, 10, 12, 0.76);
+    --game-paper: #161616;
+    height: 100vh;
+    min-height: 680px;
+    gap: clamp(0.5rem, 1.1vh, 0.75rem);
+    padding: clamp(0.55rem, 1.2vh, 0.85rem) clamp(0.8rem, 1.6vw, 1.25rem);
+    color: #f7f2df;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(126, 255, 49, 0.13), transparent 28%),
+      linear-gradient(180deg, rgba(3, 4, 5, 0.18), rgba(3, 4, 5, 0.9)),
+      url("/game/backgrounds/bg-01-backalley.webp") center / cover no-repeat,
+      #070707;
+  }
+
+  .gamePage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(0, 0, 0, 0.6), transparent 18%, transparent 78%, rgba(0, 0, 0, 0.7)),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 5px);
+  }
+
+  .gameClouds,
+  .gameHeaderStrip {
+    display: none;
+  }
+
+  .gameLayout {
+    z-index: 3;
+    width: min(1480px, 100%);
+    grid-template-columns: minmax(780px, 1fr) minmax(310px, 360px);
+    gap: clamp(0.75rem, 1.35vw, 1.25rem);
+  }
+
+  .gameCabinet,
+  .leaderboard {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.78);
+    box-shadow:
+      0 18px 42px rgba(0, 0, 0, 0.42),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.08);
+    outline: none;
+  }
+
+  .gameCabinet {
+    padding: clamp(0.45rem, 0.9vw, 0.7rem);
+  }
+
+  .lobbyCabinet {
+    background:
+      radial-gradient(circle at 50% 44%, rgba(139, 255, 43, 0.08), transparent 36%),
+      rgba(5, 6, 8, 0.68);
+  }
+
+  .gameHud {
+    grid-template-columns: auto minmax(8.5rem, 1fr) minmax(9.5rem, 1.2fr) minmax(5.2rem, 0.55fr) minmax(5.4rem, 0.55fr) auto;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .hudLogo,
+  .hudCell,
+  .hudIconButton {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.018)),
+      rgba(4, 5, 6, 0.86);
+    box-shadow:
+      0 8px 22px rgba(0, 0, 0, 0.34),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.08);
+  }
+
+  .hudLogo {
+    width: clamp(7rem, 10vw, 10rem);
+    min-height: 4.15rem;
+    display: grid;
+    place-items: center;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .hudLogo img {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.36));
+  }
+
+  .hudCell {
+    align-content: center;
+    gap: 0.25rem;
+    padding: 0.58rem 0.72rem;
+    color: rgba(247, 242, 223, 0.82);
+    box-shadow:
+      0 8px 22px rgba(0, 0, 0, 0.34),
+      inset 0 -4px 0 rgba(143, 255, 45, 0.1);
+    font-size: clamp(0.62rem, 0.9vw, 0.75rem);
+  }
+
+  .hudCell strong {
+    color: #8dde3e;
+    font-size: clamp(1rem, 1.65vw, 1.45rem);
+    text-shadow: 0 0 10px rgba(126, 255, 49, 0.2);
+  }
+
+  .hudCell:nth-of-type(2) strong {
+    color: #b357ff;
+  }
+
+  .hudCell:nth-of-type(3) strong {
+    color: #ffb42c;
+  }
+
+  .hudIconGroup {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    align-items: stretch;
+    gap: 0.44rem;
+  }
+
+  .hudIconButton {
+    min-width: 3.35rem;
+    min-height: 4.15rem;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 0.62rem;
+    color: #f7f2df;
+    cursor: default;
+    font: inherit;
+    font-size: 0.66rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+  }
+
+  button.hudIconButton {
+    cursor: pointer;
+  }
+
+  .hudIconButton:hover {
+    transform: translateY(-1px) scale(1.04);
+    color: #8dde3e;
+    border-color: rgba(143, 255, 45, 0.56);
+    box-shadow:
+      0 10px 26px rgba(0, 0, 0, 0.42),
+      0 0 18px rgba(143, 255, 45, 0.22),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.18);
+  }
+
+  .hudIconButton svg {
+    width: 1.45rem;
+    height: 1.45rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.5;
+    filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.34));
+  }
+
+  .hudIconButton:nth-child(3) {
+    min-width: 3.35rem;
+    color: #f7f2df;
+    border-color: rgba(179, 87, 255, 0.56);
+  }
+
+  .statusBadges span {
+    border-color: rgba(143, 255, 45, 0.4);
+    color: #101010;
+    background: #8dde3e;
+  }
+
+  .canvasWrap {
+    border-color: rgba(255, 255, 255, 0.13);
+    background: rgba(3, 4, 5, 0.7);
+    box-shadow:
+      0 18px 36px rgba(0, 0, 0, 0.38),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .lobbyCabinet .canvasWrap {
+    border: 0;
+    background:
+      radial-gradient(circle at 50% 31%, rgba(143, 255, 45, 0.11), transparent 28%),
+      rgba(4, 5, 6, 0.32);
+    box-shadow: none;
+  }
+
+  .lobbyCabinet .canvasWrap::after {
+    background:
+      radial-gradient(circle at 50% 40%, transparent 0 26%, rgba(0, 0, 0, 0.54) 100%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 6px);
+  }
+
+  .lobbyCabinet .gameCanvas {
+    opacity: 0.34;
+  }
+
+  .soundToggle {
+    display: none;
+  }
+
+  .gameOverlay {
+    padding: clamp(0.75rem, 1vw, 1rem);
+    background:
+      radial-gradient(circle at 50% 30%, rgba(143, 255, 45, 0.1), transparent 30%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.58));
+  }
+
+  .lobbyCabinet .gameOverlay {
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: clamp(0.35rem, 0.8vh, 0.65rem);
+    text-align: center;
+    background:
+      radial-gradient(circle at 50% 31%, rgba(143, 255, 45, 0.09), transparent 25%),
+      rgba(0, 0, 0, 0.34);
+  }
+
+  .lobbyCabinet .gameOverlay > span {
+    color: #8dde3e;
+    font-size: clamp(0.72rem, 1vw, 0.86rem);
+    letter-spacing: 0;
+    text-shadow: 0 0 10px rgba(143, 255, 45, 0.26);
+  }
+
+  .lobbyCabinet .gameOverlay h2 {
+    max-width: 13ch;
+    justify-self: center;
+    color: #f8f7ef;
+    font-size: clamp(3rem, 6.6vw, 6.2rem);
+    line-height: 0.78;
+    text-shadow:
+      5px 6px 0 #000,
+      0 0 28px rgba(143, 255, 45, 0.12);
+  }
+
+  .lobbyCabinet .gameOverlay > p {
+    display: none;
+  }
+
+  .readyMenu {
+    width: min(100%, 72rem);
+    align-self: stretch;
+    grid-template-columns: minmax(15rem, 0.58fr) minmax(24rem, 1fr);
+    gap: clamp(0.75rem, 1.2vw, 1.05rem);
+  }
+
+  .menuAccessPanel,
+  .menuSkinPanel {
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+      rgba(4, 5, 6, 0.84);
+    box-shadow:
+      0 16px 34px rgba(0, 0, 0, 0.38),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.06);
+  }
+
+  .menuSkinPanel {
+    order: 0;
+    padding: 0.7rem;
+  }
+
+  .menuAccessPanel {
+    order: 1;
+    align-content: center;
+    gap: 0.62rem;
+    padding: clamp(0.75rem, 1.2vw, 1.05rem);
+  }
+
+  .menuIntro {
+    justify-items: center;
+    gap: 0.15rem;
+  }
+
+  .menuIntro span {
+    color: #8dde3e;
+    font-size: 0.68rem;
+  }
+
+  .menuIntro strong {
+    color: #f8f7ef;
+    font-family: "The Chello", "Courier New", monospace;
+    font-size: clamp(1.75rem, 4vw, 3.2rem);
+    line-height: 0.82;
+    text-transform: uppercase;
+    text-shadow: 4px 4px 0 #000;
+  }
+
+  .prizeStrip {
+    display: none;
+  }
+
+  .holderRunCard,
+  .guestRunCard {
+    display: grid;
+    gap: 0.48rem;
+    padding: 0.78rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+      rgba(0, 0, 0, 0.5);
+  }
+
+  .guestRunCard {
+    border-color: rgba(56, 131, 255, 0.36);
+  }
+
+  .runCardHeader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.5rem;
+    text-align: left;
+  }
+
+  .runCardHeader strong {
+    color: #8dde3e;
+    font-size: 0.9rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .guestRunCard .runCardHeader strong {
+    color: #4fa2ff;
+  }
+
+  .runCardHeader small {
+    color: rgba(247, 242, 223, 0.62);
+    font-size: 0.58rem;
+    line-height: 1.1;
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  .holderTerminal {
+    gap: 0.42rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .walletEntry {
+    gap: 0.34rem;
+    text-align: left;
+  }
+
+  .walletEntry span {
+    color: rgba(247, 242, 223, 0.72);
+  }
+
+  .walletEntry div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6.4rem;
+    gap: 0.5rem;
+  }
+
+  .walletEntry input {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.62);
+  }
+
+  .walletEntry input::placeholder {
+    color: rgba(247, 242, 223, 0.35);
+  }
+
+  .walletEntry .startButton {
+    min-height: 2.55rem;
+    color: #101010;
+    background: #8dde3e;
+    box-shadow: 0 5px 0 rgba(72, 124, 22, 0.62);
+  }
+
+  .statusPill,
+  .saveConfirmation {
+    color: #101010;
+    background: #8dde3e;
+  }
+
+  .formError {
+    color: #ff786d;
+  }
+
+  .orDivider {
+    position: relative;
+    display: grid;
+    place-items: center;
+    color: #f7f2df;
+    font-size: 0.72rem;
+    font-weight: 900;
+  }
+
+  .orDivider::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(247, 242, 223, 0.34), transparent);
+  }
+
+  .orDivider span {
+    position: relative;
+    z-index: 1;
+    padding: 0.22rem 0.42rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    color: #f7f2df;
+    background: #050506;
+  }
+
+  .primaryRunButton,
+  .bountyRunButton {
+    min-height: 3.15rem;
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f8f7ef;
+    font-size: 0.92rem;
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .bountyRunButton {
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent),
+      #8dde3e;
+  }
+
+  .bountyRunButton:disabled {
+    color: rgba(247, 242, 223, 0.44);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+      rgba(62, 62, 62, 0.72);
+  }
+
+  .primaryRunButton {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent),
+      #1f5bc2;
+  }
+
+  .skinSelector {
+    gap: 0.55rem;
+  }
+
+  .skinTitle {
+    justify-self: start;
+    color: #f8f7ef;
+    font-family: "The Chello", "Courier New", monospace;
+    font-size: 1.65rem;
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .skinSubtitle {
+    justify-self: start;
+    margin-top: -0.4rem;
+    color: #8dde3e;
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .skinGrid {
+    grid-template-columns: 1fr;
+    gap: 0.42rem;
+  }
+
+  .skinButton {
+    grid-template-columns: 3.35rem minmax(0, 1fr) auto;
+    min-height: 4.05rem;
+    justify-items: start;
+    gap: 0.65rem;
+    padding: 0.48rem 0.62rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.48);
+    box-shadow: none;
+  }
+
+  .skinButton:hover {
+    translate: 0 -1px;
+    background:
+      linear-gradient(180deg, rgba(143, 255, 45, 0.09), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.55);
+  }
+
+  .skinButtonSelected {
+    border-color: rgba(143, 255, 45, 0.8);
+    background:
+      linear-gradient(90deg, rgba(143, 255, 45, 0.2), rgba(143, 255, 45, 0.03)),
+      rgba(0, 0, 0, 0.56);
+    box-shadow:
+      0 0 0 1px rgba(143, 255, 45, 0.26),
+      0 0 24px rgba(143, 255, 45, 0.12);
+    scale: none;
+  }
+
+  .skinPreview,
+  .skinButtonSelected .skinPreview {
+    grid-row: 1 / span 2;
+    width: 3.1rem;
+  }
+
+  .skinButton span {
+    align-self: end;
+    color: #f7f2df;
+    font-size: 0.78rem;
+  }
+
+  .skinUnlock {
+    justify-self: end;
+    align-self: center;
+    padding: 0.22rem 0.42rem;
+    border-radius: 999px;
+    color: #8dde3e;
+    background: rgba(143, 255, 45, 0.08);
+    font-size: 0.58rem;
+  }
+
+  .skinButtonLocked {
+    opacity: 0.72;
+  }
+
+  .skinButtonLocked .skinPreview {
+    opacity: 0.46;
+    filter: grayscale(0.85);
+  }
+
+  .skinButtonLocked .skinUnlock {
+    color: rgba(247, 242, 223, 0.62);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .leaderboard {
+    border-radius: 14px;
+    color: #f7f2df;
+  }
+
+  .leaderboardHeader .kicker,
+  .leaderboardHeader small {
+    color: rgba(247, 242, 223, 0.58);
+  }
+
+  .leaderboardHeader h2 {
+    color: #f7f2df;
+    font-size: clamp(2.35rem, 3.2vw, 3.25rem);
+    text-shadow: 4px 4px 0 #000;
+  }
+
+  .rewardPanel,
+  .weekReset,
+  .playerBest,
+  .leaderboardRow,
+  .leaderboardEmpty {
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+      rgba(0, 0, 0, 0.48);
+  }
+
+  .rewardPanel h3 {
+    color: #b357ff;
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .rewardPanel p,
+  .rewardPanel small,
+  .rewardPanel strong,
+  .leaderboardRow span,
+  .leaderboardRow small,
+  .xHandleText,
+  .leaderboardEmpty {
+    color: rgba(247, 242, 223, 0.76);
+  }
+
+  .rewardPanel p span,
+  .leaderboardRow strong,
+  .weekReset strong,
+  .playerBest strong,
+  .leaderboardRow b {
+    color: #8dde3e;
+  }
+
+  .leaderboardRow {
+    grid-template-columns: 2rem 2.65rem minmax(0, 1fr) auto;
+    padding: 0.52rem 0.62rem;
+  }
+
+  .leaderboardAvatar {
+    border-color: rgba(255, 255, 255, 0.14);
+    background:
+      radial-gradient(circle at 50% 30%, rgba(143, 255, 45, 0.18), transparent 58%),
+      rgba(0, 0, 0, 0.4);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+  }
+
+  .leaderboardRow b {
+    font-size: 0.88rem;
+  }
+
+  .playerBest {
+    border-radius: 10px;
+    background: rgba(143, 255, 45, 0.12);
+  }
+
+  .playerBest span,
+  .weekReset span {
+    color: rgba(247, 242, 223, 0.62);
+  }
+
+  .leaderboardToggle {
+    min-height: 3rem;
+    border-color: rgba(255, 255, 255, 0.13);
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+      #8a19b6;
+    box-shadow: 0 7px 0 rgba(46, 0, 64, 0.58);
+    font-size: 0.82rem;
+  }
 }
 
 @media (max-width: 980px) {
@@ -1384,10 +2408,14 @@
   }
 
   .gameHud {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: minmax(4.4rem, 0.95fr) minmax(5.7rem, 1.2fr) minmax(3.1rem, 0.58fr) minmax(3.5rem, 0.62fr);
     gap: 0.2rem;
     margin-bottom: 0.28rem;
     padding: 0.22rem;
+  }
+
+  .gameHud .hudCell:first-of-type {
+    grid-column: auto;
   }
 
   .hudCell:nth-child(5) {
@@ -1395,8 +2423,10 @@
   }
 
   .hudCell {
+    min-height: 2.15rem;
+    justify-content: start;
     gap: 0.08rem;
-    padding: 0.2rem 0.16rem;
+    padding: 0.2rem 0.28rem;
     border-width: 1.5px;
     font-size: 0.43rem;
   }
@@ -1412,15 +2442,6 @@
 
   .canvasWrap::after {
     display: none;
-  }
-
-  .soundToggle {
-    top: 0.34rem;
-    right: 0.34rem;
-    min-width: 4.55rem;
-    min-height: 1.64rem;
-    padding: 0.24rem 0.36rem;
-    font-size: 0.48rem;
   }
 
   .gameOverlay {
@@ -1710,7 +2731,7 @@
   }
 
   .leaderboardRow {
-    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    grid-template-columns: 2rem 2.35rem minmax(0, 1fr) auto;
     gap: 0.5rem;
     padding: 0.5rem;
   }
@@ -1762,6 +2783,28 @@
   }
 }
 
+@keyframes preloaderFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gameCabinetReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes hudPaperPulse {
   from {
     transform: translateY(0) scale(1);
@@ -1790,6 +2833,23 @@
   }
 }
 
+@keyframes arcadeEventSlide {
+  0% {
+    opacity: 0;
+    transform: translate3d(1.25rem, -0.15rem, 0) scale(0.97);
+  }
+
+  10%,
+  86% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(1rem, -0.15rem, 0) scale(0.98);
+  }
+}
 
 .xHandleLink {
   display: inline-flex;
@@ -1824,6 +2884,7 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
+  transition: opacity 360ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .leaderboardMobileOpen {
@@ -1952,6 +3013,320 @@
   }
 }
 
+@media (min-width: 981px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) {
+    background:
+      radial-gradient(circle at 50% 45%, rgba(126, 255, 49, 0.08), transparent 26%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.96)),
+      url("/game/backgrounds/bg-01-backalley.webp") center / cover no-repeat,
+      #030303;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet))::after {
+    background:
+      radial-gradient(circle at 50% 50%, transparent 0 48%, rgba(0, 0, 0, 0.7) 100%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 5px);
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) {
+    width: min(1120px, 100%);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardSidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 28vw);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(2.5rem, 0, 0);
+    visibility: hidden;
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.93)),
+      rgba(0, 0, 0, 0.92);
+    box-shadow:
+      0 24px 70px rgba(0, 0, 0, 0.62),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) .canvasWrap {
+    box-shadow:
+      0 26px 80px rgba(0, 0, 0, 0.7),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) .controlsHint {
+    color: rgba(247, 242, 223, 0.42);
+  }
+
+  .hudIconGroup {
+    grid-template-columns: repeat(3, auto);
+  }
+
+  .hudIconButton {
+    text-decoration: none;
+  }
+
+  .hudIconButton:nth-child(2) {
+    color: #8dde3e;
+  }
+
+  .hudIconButton:nth-child(3) {
+    min-width: 3.35rem;
+    color: #f7f2df;
+    border-color: rgba(179, 87, 255, 0.56);
+  }
+
+  .readyMenu {
+    grid-template-columns: minmax(18rem, 0.78fr) minmax(24rem, 1fr);
+  }
+
+  .menuSkinPanel {
+    align-content: start;
+    max-height: min(100%, 42rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .skinTitle {
+    font-size: 1.95rem;
+  }
+
+  .skinGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.62rem;
+  }
+
+  .skinButton {
+    grid-template-columns: 1fr;
+    min-height: 8.4rem;
+    place-items: center;
+    gap: 0.34rem;
+    padding: 0.62rem 0.46rem;
+    overflow: hidden;
+  }
+
+  .skinButton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 26%, rgba(143, 255, 45, 0.14), transparent 34%),
+      linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.22));
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+
+  .skinButton:hover::after,
+  .skinButtonSelected::after {
+    opacity: 1;
+  }
+
+  .skinPreview,
+  .skinButtonSelected .skinPreview {
+    grid-row: auto;
+    width: clamp(3.6rem, 5vw, 4.75rem);
+    filter: drop-shadow(0 10px 0 rgba(0, 0, 0, 0.25));
+  }
+
+  .skinButton span {
+    align-self: center;
+    text-align: center;
+  }
+
+  .skinUnlock {
+    justify-self: center;
+    align-self: center;
+  }
+
+  .skinButtonLocked::before {
+    content: "LOCKED";
+    position: absolute;
+    top: 0.48rem;
+    right: 0.48rem;
+    z-index: 1;
+    padding: 0.2rem 0.34rem;
+    border-radius: 999px;
+    color: rgba(247, 242, 223, 0.74);
+    background: rgba(0, 0, 0, 0.5);
+    font-size: 0.48rem;
+    font-weight: 900;
+  }
+
+  .holderRunCard,
+  .guestRunCard {
+    position: relative;
+    overflow: hidden;
+    padding: 0.95rem;
+  }
+
+  .holderRunCard::before,
+  .guestRunCard::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at 86% 0%, rgba(143, 255, 45, 0.16), transparent 32%);
+  }
+
+  .guestRunCard::before {
+    background: radial-gradient(circle at 86% 0%, rgba(79, 162, 255, 0.22), transparent 32%);
+  }
+
+  .holderRunCard > *,
+  .guestRunCard > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .deathOverlay {
+    align-content: center;
+    background:
+      radial-gradient(circle at 50% 22%, rgba(179, 87, 255, 0.2), transparent 28%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0.9));
+  }
+
+  .deathOverlay > span {
+    color: #b357ff;
+    font-size: 0.8rem;
+  }
+
+  .deathOverlay h2 {
+    max-width: none;
+    color: #f7f2df;
+    font-size: clamp(2.85rem, 5.4vw, 5.4rem);
+    text-shadow: 5px 6px 0 #000;
+  }
+
+  .deathOverlay > p {
+    max-width: 32rem;
+    color: #ffcf54;
+    font-size: 0.95rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .resultPanel {
+    width: min(100%, 48rem);
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.74fr);
+    align-items: start;
+    gap: 0.72rem;
+    padding: 0.86rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+      rgba(3, 4, 5, 0.78);
+    box-shadow:
+      0 20px 50px rgba(0, 0, 0, 0.46),
+      inset 0 0 0 1px rgba(179, 87, 255, 0.12);
+  }
+
+  .resultPanel dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resultPanel dl div,
+  .postDeathVerify,
+  .profileEntryPanel,
+  .runUnlockSummary,
+  .nameEntry {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.38);
+  }
+
+  .resultPanel dl div:first-child {
+    grid-column: 1 / -1;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(143, 255, 45, 0.2), transparent 38%),
+      rgba(143, 255, 45, 0.12);
+  }
+
+  .resultPanel dt,
+  .postDeathVerify small,
+  .guestNote {
+    color: rgba(247, 242, 223, 0.58);
+  }
+
+  .resultPanel dd {
+    color: #f7f2df;
+  }
+
+  .resultPanel dl div:first-child dd {
+    color: #8dde3e;
+    font-size: clamp(1.65rem, 3vw, 2.5rem);
+  }
+
+  .nameEntry {
+    padding: 0.48rem;
+    border-radius: 10px;
+  }
+
+  .profileEntryPanel {
+    align-self: stretch;
+    padding: 0.58rem;
+  }
+
+  .nameEntry span,
+  .postDeathVerify strong,
+  .runUnlockSummary > strong {
+    color: #b357ff;
+  }
+
+  .nameEntry input {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.52);
+  }
+
+  .postDeathVerify {
+    align-self: stretch;
+    padding: 0.65rem;
+  }
+
+  .runUnlockSummary span {
+    border-color: rgba(143, 255, 45, 0.42);
+    color: #101010;
+    background: #8dde3e;
+    box-shadow: 0 4px 0 rgba(72, 124, 22, 0.34);
+  }
+
+  .postDeathVerify .walletEntry {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .deathActions {
+    width: min(100%, 48rem);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .deathActions .startButton {
+    min-height: 2.7rem;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+      rgba(179, 87, 255, 0.72);
+    box-shadow: 0 7px 0 rgba(46, 0, 64, 0.5);
+  }
+
+  .deathActions .startButton:first-child {
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent),
+      #8dde3e;
+    box-shadow: 0 7px 0 rgba(72, 124, 22, 0.5);
+  }
+}
+
 /* Low FX performance patch */
 @media (max-width: 760px),
 (pointer: coarse) {
@@ -1981,7 +3356,2740 @@
   .gameHudBoosted .hudCell:nth-child(4),
   .gameHudMilestone .hudCell:first-child,
   .gameHudIntoxicated,
-  .unlockToast {
+  .unlockToast,
+  .arcadeEvent {
     animation: none !important;
   }
+}
+
+/* Final responsive fit pass */
+@media (min-width: 981px) {
+  .arcadeEventFeed {
+    width: min(26rem, calc(100% - 2rem));
+  }
+
+  .arcadeEvent {
+    min-height: 3.05rem;
+    grid-template-columns: 2.45rem minmax(0, 1fr);
+    padding: 0.46rem 0.82rem 0.44rem 0.54rem;
+    font-size: clamp(0.82rem, 1.28vw, 1.02rem);
+  }
+
+  .arcadeEventIcon {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.12rem;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1180px) {
+  .gamePage {
+    padding: 0.52rem;
+    gap: 0.48rem;
+  }
+
+  .gameLayout {
+    width: min(100%, 1080px);
+    gap: 0.55rem;
+  }
+
+  .gameLayout:has(.gameCabinet:not(.lobbyCabinet)) {
+    width: min(100%, 980px);
+  }
+
+  .gameHud {
+    gap: 0.26rem;
+    padding: 0.28rem;
+  }
+
+  .hudCell {
+    padding: 0.28rem 0.34rem;
+  }
+
+  .hudCell strong {
+    font-size: clamp(0.78rem, 1.65vw, 1.12rem);
+  }
+
+  .readyMenu {
+    grid-template-columns: minmax(15rem, 0.72fr) minmax(20rem, 1fr);
+  }
+
+  .skinGrid {
+    gap: 0.46rem;
+  }
+
+  .skinButton {
+    min-height: 7.3rem;
+  }
+
+  .leaderboardHeader h2 {
+    font-size: clamp(2rem, 3vw, 2.75rem);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 980px) {
+  .gamePage {
+    height: auto;
+    min-height: 100svh;
+    padding: 0.55rem;
+    overflow-y: auto;
+  }
+
+  .gameLayout {
+    width: min(100%, 820px);
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .gameCabinet,
+  .gatedGame {
+    min-height: 0;
+  }
+
+  .gameHud {
+    grid-template-columns: 1.15fr 1fr 1fr 0.7fr 0.7fr auto;
+    gap: 0.28rem;
+    padding: 0.3rem;
+  }
+
+  .hudIconGroup {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+  }
+
+  .hudIconButton {
+    min-width: 2.6rem;
+  }
+
+  .gameCanvas {
+    height: min(68svh, 620px);
+    min-height: 430px;
+  }
+
+  .lobbyCabinet .gameCanvas {
+    height: min(58svh, 520px);
+    min-height: 390px;
+  }
+
+  .readyMenu {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: min(100%, 56svh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .menuSkinPanel .skinSelector {
+    max-height: none;
+  }
+
+  .skinGrid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(7rem, 8.5rem);
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .skinButton {
+    min-height: 7.5rem;
+    scroll-snap-align: start;
+  }
+
+  .leaderboardSidebar {
+    display: none;
+  }
+
+  .leaderboardMobileOpen {
+    display: inline-flex;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    position: absolute;
+    top: 6rem;
+    right: 0.6rem;
+    z-index: 14;
+    margin: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    width: 2.35rem;
+    min-width: 2.35rem;
+    min-height: 2.35rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: clamp(0.54rem, 2vw, 0.68rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before {
+    content: "II";
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    position: absolute;
+    top: 8.7rem;
+    right: 0.6rem;
+    bottom: auto;
+    z-index: 14;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before {
+    content: "★";
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameActions {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) {
+    height: 100svh;
+    min-height: 0;
+    padding: 0.22rem;
+    overflow: hidden;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameLayout {
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gatedGame,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .canvasWrap {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCanvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gamePage:has(.lobbyCabinet) {
+    height: auto;
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .gameHud {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .hudCell {
+    min-height: 2.2rem;
+  }
+
+  .soundToggle {
+    top: 3.18rem;
+    right: 0.42rem;
+    z-index: 14;
+    min-width: 2.12rem;
+    width: 2.12rem;
+    min-height: 2.12rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      rgba(4, 5, 6, 0.82);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.34),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.08);
+  }
+
+  .soundToggle svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .gameActions {
+    position: absolute;
+    top: 5.55rem;
+    right: 0.42rem;
+    z-index: 14;
+    margin: 0;
+  }
+
+  .pauseButton {
+    min-width: 2.12rem;
+    width: 2.12rem;
+    min-height: 2.12rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent),
+      #8dde3e;
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.34),
+      inset 0 -3px 0 rgba(72, 124, 22, 0.36);
+    font-size: 0;
+  }
+
+  .pauseButton::before {
+    content: "II";
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .pauseButton:disabled {
+    opacity: 0.42;
+  }
+
+  .arcadeEventFeed {
+    top: 0.34rem;
+    width: min(16.5rem, calc(100% - 0.7rem));
+  }
+
+  .arcadeEvent {
+    min-height: 2.18rem;
+  }
+
+  .leaderboardSidebar {
+    display: none;
+  }
+
+  .leaderboardMobileOpen {
+    position: absolute;
+    top: 7.92rem;
+    right: 0.42rem;
+    bottom: auto;
+    z-index: 14;
+    display: inline-flex;
+    min-width: 2.12rem;
+    width: 2.12rem;
+    min-height: 2.12rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent),
+      #8a19b6;
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.34),
+      inset 0 -3px 0 rgba(46, 0, 64, 0.36);
+    font-size: 0;
+  }
+
+  .leaderboardMobileOpen::before {
+    content: "★";
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .leaderboardModal {
+    padding: 0.35rem;
+  }
+
+  .leaderboardModalPanel {
+    max-height: calc(100svh - 0.7rem);
+  }
+}
+
+@media (max-width: 430px) {
+  .gamePage {
+    padding: 0.24rem;
+  }
+
+  .gameCabinet {
+    border-width: 2px;
+    padding: 0.24rem;
+    outline: 0;
+  }
+
+  .gameHud {
+    gap: 0.16rem;
+    margin-bottom: 0.2rem;
+    padding: 0.16rem;
+  }
+
+  .hudCell {
+    min-height: 2rem;
+    padding: 0.16rem 0.1rem;
+    border-width: 1px;
+    font-size: 0.38rem;
+  }
+
+  .hudCell strong {
+    font-size: clamp(0.48rem, 3.3vw, 0.58rem);
+  }
+
+  .gameOverlay {
+    padding: 0.34rem;
+  }
+
+  .readyMenu {
+    gap: 0.26rem;
+  }
+
+  .menuAccessPanel,
+  .menuSkinPanel,
+  .holderRunCard,
+  .guestRunCard {
+    padding: 0.28rem;
+  }
+
+  .walletEntry div {
+    grid-template-columns: 1fr;
+  }
+
+  .walletEntry .startButton {
+    width: 100%;
+  }
+
+  .skinGrid {
+    grid-auto-columns: minmax(4.2rem, 4.85rem);
+  }
+
+  .skinButton {
+    min-height: 4.45rem;
+  }
+
+  .deathActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .arcadeEventFeed {
+    width: min(15rem, calc(100% - 0.6rem));
+  }
+}
+
+@media (max-width: 760px) {
+  .lobbyCabinet .gameOverlay {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: 0.32rem;
+  }
+
+  .lobbyCabinet .gameOverlay > span,
+  .lobbyCabinet .gameOverlay h2 {
+    display: none;
+  }
+
+  .readyMenu {
+    align-self: stretch;
+  }
+
+  .menuAccessPanel {
+    order: 1;
+  }
+
+  .menuSkinPanel {
+    order: 0;
+  }
+
+  .menuIntro strong {
+    font-size: clamp(1.15rem, 7vw, 1.8rem);
+    line-height: 0.88;
+  }
+
+  .skinTitle {
+    color: #f8f7ef;
+    font-family: "The Chello", "Courier New", monospace;
+    font-size: clamp(1.1rem, 6.4vw, 1.65rem);
+    line-height: 0.88;
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .skinSubtitle {
+    color: #8dde3e;
+  }
+
+  .skinSelectedPreview {
+    border-radius: 10px;
+  }
+
+  .gamePage:has(.lobbyCabinet) .canvasWrap {
+    min-height: 0;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameCanvas {
+    height: min(82svh, 680px);
+    min-height: 560px;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameActions {
+    display: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .leaderboardMobileOpen {
+    position: fixed;
+    top: auto;
+    right: 0.55rem;
+    bottom: calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    min-width: 7.2rem;
+    min-height: 2.15rem;
+    padding: 0.42rem 0.62rem;
+    font-size: 0.56rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .leaderboardMobileOpen::before {
+    content: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    position: absolute;
+    top: 5.55rem;
+    right: 0.42rem;
+    z-index: 14;
+    margin: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    position: absolute;
+    top: 7.92rem;
+    right: 0.42rem;
+    bottom: auto;
+    z-index: 14;
+    width: 2.12rem;
+    min-width: 2.12rem;
+    min-height: 2.12rem;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before {
+    content: "★";
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+}
+
+@media (max-height: 620px) and (orientation: landscape) {
+  .gamePage {
+    height: 100svh;
+    min-height: 0;
+    padding: 0.24rem;
+    overflow: hidden;
+  }
+
+  .gameLayout {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .gamePage:has(.lobbyCabinet) {
+    height: auto;
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameLayout {
+    height: auto;
+    gap: 0.38rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameCanvas {
+    height: min(72svh, 420px);
+    min-height: 310px;
+  }
+
+  .gamePage:has(.lobbyCabinet) .readyMenu {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .gatedGame,
+  .gameCabinet {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gameCabinet {
+    padding: 0.22rem;
+    border-width: 2px;
+    outline: 0;
+  }
+
+  .gameHud {
+    grid-template-columns: 1.1fr 1fr 1fr 0.62fr 0.62fr auto;
+    gap: 0.18rem;
+    margin-bottom: 0.18rem;
+    padding: 0.16rem;
+  }
+
+  .hudCell {
+    min-height: 2rem;
+    padding: 0.15rem 0.24rem;
+    font-size: 0.4rem;
+  }
+
+  .hudCell strong {
+    font-size: 0.58rem;
+  }
+
+  .hudIconGroup {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 0.18rem;
+  }
+
+  .hudIconButton {
+    min-width: 2.05rem;
+    min-height: 2.05rem;
+  }
+
+  .canvasWrap {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .gameCanvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .leaderboardSidebar {
+    display: none;
+  }
+
+  .leaderboardMobileOpen {
+    display: inline-flex;
+  }
+
+  .controlsHint {
+    display: none;
+  }
+
+  .arcadeEventFeed {
+    top: 0.28rem;
+    width: min(20rem, calc(100% - 1rem));
+  }
+
+  .arcadeEvent {
+    min-height: 2.2rem;
+    grid-template-columns: 1.8rem minmax(0, 1fr);
+    padding: 0.3rem 0.54rem 0.28rem 0.38rem;
+    font-size: clamp(0.62rem, 1.7vw, 0.78rem);
+  }
+
+  .arcadeEventIcon {
+    width: 1.48rem;
+    height: 1.48rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* Mobile/tablet arcade visual parity */
+@media (max-width: 980px) {
+  .gamePage {
+    --game-card: rgba(9, 10, 12, 0.78);
+    --game-paper: #161616;
+    color: #f7f2df;
+    background:
+      radial-gradient(circle at 50% 35%, rgba(126, 255, 49, 0.1), transparent 30%),
+      linear-gradient(180deg, rgba(3, 4, 5, 0.38), rgba(3, 4, 5, 0.94)),
+      url("/game/backgrounds/bg-01-backalley.webp") center / cover no-repeat,
+      #070707;
+  }
+
+  .gamePage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 48%, transparent 0 42%, rgba(0, 0, 0, 0.64) 100%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 5px);
+  }
+
+  .gameClouds,
+  .gameHeaderStrip {
+    display: none;
+  }
+
+  .gameLayout {
+    position: relative;
+    z-index: 3;
+  }
+
+  .gameCabinet,
+  .leaderboard,
+  .gateCard,
+  .leaderboardModalPanel {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.82);
+    box-shadow:
+      0 16px 34px rgba(0, 0, 0, 0.42),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.08);
+    outline: none;
+  }
+
+  .gameHud {
+    border: 0;
+    background: transparent;
+  }
+
+  .hudCell,
+  .hudIconButton {
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 8px;
+    color: rgba(247, 242, 223, 0.78);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.015)),
+      rgba(4, 5, 6, 0.82);
+    box-shadow:
+      0 6px 15px rgba(0, 0, 0, 0.28),
+      inset 0 -3px 0 rgba(143, 255, 45, 0.08);
+  }
+
+  .hudCell strong {
+    color: #8dde3e;
+    text-shadow: 0 0 8px rgba(126, 255, 49, 0.18);
+  }
+
+  .hudCell:nth-of-type(2) strong {
+    color: #b357ff;
+  }
+
+  .hudCell:nth-of-type(3) strong {
+    color: #ffb42c;
+  }
+
+  .lobbyCabinet {
+    background:
+      radial-gradient(circle at 50% 30%, rgba(143, 255, 45, 0.08), transparent 32%),
+      rgba(5, 6, 8, 0.72);
+  }
+
+  .lobbyCabinet .canvasWrap {
+    border-color: rgba(255, 255, 255, 0.1);
+    background:
+      radial-gradient(circle at 50% 28%, rgba(143, 255, 45, 0.1), transparent 30%),
+      rgba(4, 5, 6, 0.34);
+    box-shadow: none;
+  }
+
+  .lobbyCabinet .canvasWrap::after {
+    background:
+      radial-gradient(circle at 50% 38%, transparent 0 26%, rgba(0, 0, 0, 0.54) 100%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 6px);
+  }
+
+  .lobbyCabinet .gameCanvas {
+    opacity: 0.28;
+  }
+
+  .gameOverlay {
+    background:
+      radial-gradient(circle at 50% 30%, rgba(143, 255, 45, 0.08), transparent 30%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.62));
+  }
+
+  .lobbyCabinet .gameOverlay > span {
+    color: #8dde3e;
+    text-shadow: 0 0 10px rgba(143, 255, 45, 0.24);
+  }
+
+  .lobbyCabinet .gameOverlay h2 {
+    color: #f8f7ef;
+    font-size: clamp(2.15rem, 7.8vw, 4rem);
+    line-height: 0.82;
+    text-shadow:
+      4px 5px 0 #000,
+      0 0 22px rgba(143, 255, 45, 0.12);
+  }
+
+  .lobbyCabinet .gameOverlay > p {
+    display: none;
+  }
+
+  .menuAccessPanel,
+  .menuSkinPanel,
+  .holderRunCard,
+  .guestRunCard,
+  .holderTerminal,
+  .walletEntry,
+  .skinSelector,
+  .modeChooser,
+  .skinSelectedPreview,
+  .resultPanel,
+  .nameEntry,
+  .postDeathVerify,
+  .profileEntryPanel,
+  .runUnlockSummary {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.5);
+    box-shadow: none;
+  }
+
+  .menuIntro span,
+  .terminalHeader span,
+  .runCardHeader small,
+  .skinSubtitle,
+  .modeChooser small,
+  .guestNote,
+  .skinSelectedPreview span,
+  .skinSelectedPreview small,
+  .resultPanel dt,
+  .postDeathVerify small,
+  .leaderboardHeader .kicker,
+  .leaderboardHeader small,
+  .leaderboardRow span,
+  .leaderboardRow small,
+  .leaderboardEmpty {
+    color: rgba(247, 242, 223, 0.62);
+  }
+
+  .menuIntro strong,
+  .skinSelectedPreview strong,
+  .resultPanel dd,
+  .leaderboardHeader h2 {
+    color: #f8f7ef;
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .runCardHeader strong,
+  .terminalHeader strong,
+  .walletEntry span,
+  .skinTitle,
+  .guestNote,
+  .leaderboardRow b,
+  .playerBest strong,
+  .weekReset strong {
+    color: #8dde3e;
+  }
+
+  .guestRunCard .runCardHeader strong {
+    color: #4fa2ff;
+  }
+
+  .prizeStrip b,
+  .safetyLine span,
+  .statusPill,
+  .saveConfirmation {
+    border-color: rgba(143, 255, 45, 0.34);
+    color: #101010;
+    background: #8dde3e;
+  }
+
+  .walletEntry input,
+  .nameEntry input {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.58);
+  }
+
+  .walletEntry input::placeholder,
+  .nameEntry input::placeholder {
+    color: rgba(247, 242, 223, 0.35);
+  }
+
+  .primaryRunButton {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent),
+      #1f5bc2;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .bountyRunButton,
+  .walletEntry .startButton {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.25), transparent),
+      #8dde3e;
+    box-shadow: 0 6px 0 rgba(72, 124, 22, 0.52);
+  }
+
+  .bountyRunButton:disabled {
+    color: rgba(247, 242, 223, 0.42);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+      rgba(62, 62, 62, 0.7);
+  }
+
+  .orDivider {
+    color: rgba(247, 242, 223, 0.78);
+  }
+
+  .orDivider::before {
+    background: linear-gradient(90deg, transparent, rgba(247, 242, 223, 0.28), transparent);
+  }
+
+  .orDivider span {
+    color: #f7f2df;
+    background: #050506;
+  }
+
+  .skinButton {
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.48);
+    box-shadow: none;
+  }
+
+  .skinButton span {
+    color: #f7f2df;
+  }
+
+  .skinButtonSelected {
+    border-color: rgba(143, 255, 45, 0.85);
+    background:
+      linear-gradient(90deg, rgba(143, 255, 45, 0.2), rgba(143, 255, 45, 0.03)),
+      rgba(0, 0, 0, 0.56);
+    box-shadow:
+      0 0 0 1px rgba(143, 255, 45, 0.22),
+      0 0 20px rgba(143, 255, 45, 0.1);
+  }
+
+  .skinUnlock {
+    color: #8dde3e;
+    background: rgba(143, 255, 45, 0.08);
+  }
+
+  .skinButtonLocked .skinUnlock {
+    color: rgba(247, 242, 223, 0.6);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .rewardPanel,
+  .weekReset,
+  .playerBest,
+  .leaderboardRow,
+  .leaderboardEmpty {
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.46);
+  }
+
+  .rewardPanel h3 {
+    color: #b357ff;
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .leaderboardToggle,
+  .leaderboardMobileOpen {
+    border-color: rgba(255, 255, 255, 0.13);
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+      #8a19b6;
+    box-shadow: 0 6px 0 rgba(46, 0, 64, 0.55);
+  }
+}
+
+/* Mobile death/report cleanup */
+@media (max-width: 760px) {
+  .gamePage:has(.deathOverlay) {
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .gamePage:has(.deathOverlay) .gameActions,
+  .gamePage:has(.deathOverlay) .leaderboardMobileOpen,
+  .gamePage:has(.deathOverlay) .gameCredit,
+  .gamePage:has(.deathOverlay) .soundToggle {
+    display: none;
+  }
+
+  .deathOverlay {
+    place-items: stretch;
+    align-content: start;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    gap: 0.34rem;
+    padding: 0.48rem;
+    overflow-y: auto;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(179, 87, 255, 0.2), transparent 28%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.94), rgba(2, 3, 5, 0.98));
+  }
+
+  .deathOverlay > span {
+    justify-self: center;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid rgba(179, 87, 255, 0.34);
+    border-radius: 999px;
+    color: #b357ff;
+    background: rgba(0, 0, 0, 0.38);
+    font-size: 0.5rem;
+    line-height: 1;
+  }
+
+  .deathOverlay h2 {
+    justify-self: center;
+    max-width: none;
+    color: #f8f7ef;
+    font-size: clamp(1.65rem, 9vw, 2.45rem);
+    line-height: 0.82;
+    text-align: center;
+    text-shadow: 3px 4px 0 #000;
+  }
+
+  .deathOverlay > p {
+    justify-self: center;
+    max-width: min(100%, 18rem);
+    padding: 0.32rem 0.52rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffcf54;
+    background: rgba(0, 0, 0, 0.35);
+    font-size: 0.58rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .deathOverlay .resultPanel {
+    width: 100%;
+    max-width: 22rem;
+    justify-self: center;
+    gap: 0.42rem;
+    padding: 0.48rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 13px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+      rgba(0, 0, 0, 0.58);
+    box-shadow:
+      0 14px 32px rgba(0, 0, 0, 0.36),
+      inset 0 0 0 1px rgba(143, 255, 45, 0.08);
+  }
+
+  .deathOverlay .resultPanel dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .deathOverlay .resultPanel dl div {
+    min-height: 3.2rem;
+    align-content: center;
+    gap: 0.12rem;
+    padding: 0.36rem 0.38rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+      rgba(255, 255, 255, 0.045);
+  }
+
+  .deathOverlay .resultPanel dl div:first-child {
+    min-height: 4.4rem;
+    background:
+      radial-gradient(circle at 84% 28%, rgba(143, 255, 45, 0.16), transparent 38%),
+      rgba(143, 255, 45, 0.1);
+  }
+
+  .deathOverlay .resultPanel dt {
+    color: rgba(247, 242, 223, 0.56);
+    font-size: 0.46rem;
+  }
+
+  .deathOverlay .resultPanel dd {
+    color: #f7f2df;
+    font-size: 0.62rem;
+  }
+
+  .deathOverlay .resultPanel dl div:first-child dd {
+    color: #8dde3e;
+    font-size: clamp(1.15rem, 6vw, 1.55rem);
+    text-shadow: 0 0 10px rgba(143, 255, 45, 0.14);
+  }
+
+  .deathOverlay .postDeathVerify,
+  .deathOverlay .profileEntryPanel,
+  .deathOverlay .runUnlockSummary {
+    gap: 0.32rem;
+    padding: 0.44rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 11px;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .deathOverlay .postDeathVerify strong,
+  .deathOverlay .runUnlockSummary > strong {
+    color: #8dde3e;
+    font-size: 0.62rem;
+  }
+
+  .deathOverlay .postDeathVerify small,
+  .deathOverlay .guestNote {
+    color: rgba(247, 242, 223, 0.58);
+    font-size: 0.48rem;
+  }
+
+  .deathOverlay .walletEntry,
+  .deathOverlay .nameEntry {
+    gap: 0.24rem;
+    padding: 0.34rem;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.46);
+  }
+
+  .deathOverlay .walletEntry span,
+  .deathOverlay .nameEntry span {
+    color: #8dde3e;
+    font-size: 0.48rem;
+  }
+
+  .deathOverlay .walletEntry div {
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
+  }
+
+  .deathOverlay .walletEntry input,
+  .deathOverlay .nameEntry input {
+    height: 2rem;
+    border-width: 1px;
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.62);
+    font-size: 0.54rem;
+  }
+
+  .deathOverlay .walletEntry .startButton {
+    width: 100%;
+    min-height: 2rem;
+    font-size: 0.56rem;
+  }
+
+  .deathOverlay .formError,
+  .deathOverlay .saveConfirmation {
+    justify-self: stretch;
+    padding: 0.3rem 0.42rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.34);
+    font-size: 0.5rem;
+    text-align: center;
+  }
+
+  .deathOverlay .deathActions {
+    width: 100%;
+    max-width: 22rem;
+    justify-self: center;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.32rem;
+  }
+
+  .deathOverlay .deathActions .startButton {
+    min-height: 2.18rem;
+    padding: 0.36rem 0.32rem;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent),
+      #f2c73a;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.32);
+    font-size: 0.5rem;
+    line-height: 1.05;
+  }
+
+  .deathOverlay .deathActions .startButton:first-child {
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent),
+      #8dde3e;
+  }
+
+  .deathOverlay .deathActions .startButton:disabled {
+    color: rgba(247, 242, 223, 0.44);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent),
+      rgba(72, 72, 72, 0.72);
+  }
+}
+
+/* Final mobile gameplay controls alignment */
+@media (max-width: 980px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameHud {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.22rem;
+    margin-bottom: 0.24rem;
+    padding: 0.18rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell {
+    min-height: 2.35rem;
+    justify-items: start;
+    align-content: center;
+    padding: 0.22rem 0.34rem;
+    border-radius: 7px;
+    font-size: clamp(0.4rem, 1.6vw, 0.56rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell strong {
+    width: 100%;
+    font-size: clamp(0.62rem, 2.5vw, 0.84rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    position: fixed;
+    top: auto;
+    bottom: calc(0.42rem + env(safe-area-inset-bottom, 0px));
+    z-index: 55;
+    height: 2.45rem;
+    min-height: 2.45rem;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    margin: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    left: 0.55rem;
+    right: calc(50% + 0.16rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    left: calc(50% + 0.16rem);
+    right: 0.55rem;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, 0.42),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.26);
+    font-size: 0;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    height: 2.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, 0.42),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.26);
+    font-size: 0;
+    line-height: 1;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
+      #8dde3e;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before {
+    content: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
+      #8a19b6;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    content: "BOUNTY BOARD";
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    font-size: clamp(0.54rem, 2vw, 0.68rem);
+    line-height: 1;
+    text-align: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    font-size: clamp(0.54rem, 2vw, 0.68rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .canvasWrap {
+    padding-bottom: 0;
+  }
+
+  .gamePage:has(.deathOverlay) .gameActions,
+  .gamePage:has(.deathOverlay) .leaderboardMobileOpen,
+  .gamePage:has(.deathOverlay) .gameCredit,
+  .gamePage:has(.deathOverlay) .controlsHint {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameHud {
+    gap: 0.16rem;
+    padding: 0.14rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell {
+    min-height: 2.2rem;
+    padding: 0.18rem 0.2rem;
+    font-size: 0.36rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell strong {
+    font-size: clamp(0.52rem, 3.5vw, 0.68rem);
+  }
+}
+
+.pauseActions {
+  width: min(100%, 21rem);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.48rem;
+  justify-self: center;
+}
+
+.pauseActions .startButton {
+  width: 100%;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.gamePage:has(.pauseActions) .gameOverlay {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(141, 222, 62, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(2, 3, 5, 0.78), rgba(2, 3, 5, 0.92));
+}
+
+.gamePage:has(.pauseActions) .gameOverlay > span {
+  padding: 0.22rem 0.55rem;
+  border: 1px solid rgba(141, 222, 62, 0.38);
+  border-radius: 999px;
+  color: #8dde3e;
+  background: rgba(0, 0, 0, 0.58);
+  font-size: clamp(0.62rem, 1.2vw, 0.76rem);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(141, 222, 62, 0.28);
+}
+
+.gamePage:has(.pauseActions) .gameOverlay h2 {
+  color: #f8f7ef;
+  text-shadow:
+    4px 5px 0 #000,
+    0 0 18px rgba(255, 255, 255, 0.12);
+}
+
+.gamePage:has(.pauseActions) .gameOverlay > p {
+  padding: 0.26rem 0.6rem;
+  border-radius: 999px;
+  color: rgba(247, 242, 223, 0.82);
+  background: rgba(0, 0, 0, 0.5);
+  font-size: clamp(0.58rem, 1.1vw, 0.72rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.gamePage:has(.pauseActions) .pauseActions {
+  width: min(100%, 24rem);
+  gap: 0.58rem;
+  padding: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(5, 6, 8, 0.82);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    inset 0 0 0 1px rgba(141, 222, 62, 0.06);
+}
+
+.gamePage:has(.pauseActions) .pauseActions .startButton {
+  min-height: 3.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.32),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.gamePage:has(.pauseActions) .pauseResumeButton {
+  color: #101010;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), transparent),
+    #8dde3e;
+}
+
+.gamePage:has(.pauseActions) .pauseHomeButton {
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+    #2f75e8;
+}
+
+.gamePage:has(.pauseActions) .pauseRestartButton {
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+    #a22ccf;
+}
+
+/* Last-pass mobile gameplay polish. Keep this after the older responsive rules. */
+@media (max-width: 980px) {
+  .gamePage:has(.lobbyCabinet) .skinButton span {
+    color: #f8f7ef;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected span {
+    color: #101010;
+    text-shadow: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected .skinUnlock {
+    color: #101010;
+    background: rgba(255, 255, 255, 0.34);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameHud {
+    gap: 0.18rem;
+    padding: 0.18rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell {
+    min-height: 2.48rem;
+    padding: 0.24rem 0.34rem;
+    font-size: clamp(0.42rem, 1.85vw, 0.62rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell strong {
+    font-size: clamp(0.68rem, 2.9vw, 0.96rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .soundToggle {
+    top: 0.46rem;
+    right: 0.46rem;
+    z-index: 16;
+    width: 2.05rem;
+    min-width: 2.05rem;
+    min-height: 2.05rem;
+    padding: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .soundToggle svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    bottom: calc(0.46rem + env(safe-area-inset-bottom, 0px));
+    height: 2.34rem;
+    min-height: 2.34rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    left: 0.54rem;
+    right: calc(50% + 0.18rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    left: calc(50% + 0.18rem);
+    right: 0.54rem;
+    height: 2.34rem;
+    min-height: 2.34rem;
+    display: grid;
+    place-items: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    border-radius: 999px;
+    box-sizing: border-box;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    height: 2.34rem;
+    min-height: 2.34rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCredit {
+    display: none;
+  }
+
+  .pauseActions {
+    width: min(100%, 17.5rem);
+    gap: 0.44rem;
+  }
+
+  .pauseActions .startButton {
+    min-height: 2.58rem;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 999px;
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent),
+      #f2c73a;
+    box-shadow:
+      0 7px 18px rgba(0, 0, 0, 0.34),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.22);
+    font-size: 0.62rem;
+    text-align: center;
+  }
+
+  .pauseActions .pauseResumeButton {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent),
+      #8dde3e;
+  }
+
+  .pauseActions .pauseHomeButton {
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
+      #1f5bc2;
+  }
+
+  .pauseActions .pauseRestartButton {
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent),
+      #8a19b6;
+  }
+}
+
+@media (max-width: 430px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell {
+    min-height: 2.38rem;
+    padding: 0.22rem 0.24rem;
+    font-size: 0.4rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .hudCell strong {
+    font-size: clamp(0.6rem, 3.9vw, 0.82rem);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    font-size: 0.56rem;
+  }
+}
+
+/* Mobile-only cleanup: compact lobby, external controls, clean overlays. */
+@media (max-width: 760px) {
+  .gamePage:has(.gamePreloader) .leaderboardMobileOpen {
+    display: none;
+  }
+
+  .gamePreloader {
+    z-index: 220;
+    padding: 1rem;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(143, 255, 45, 0.14), transparent 34%),
+      linear-gradient(180deg, rgba(4, 5, 8, 0.94), rgba(0, 0, 0, 0.98)),
+      #050505;
+  }
+
+  .preloaderPanel {
+    width: min(21rem, 92vw);
+    gap: 0.62rem;
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+      rgba(5, 6, 8, 0.88);
+  }
+
+  .preloaderPanel strong {
+    font-size: clamp(2.2rem, 14vw, 4rem);
+  }
+
+  .gamePage:has(.lobbyCabinet) {
+    height: auto;
+    min-height: 100svh;
+    overflow-y: auto;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameLayout {
+    height: auto;
+    min-height: 0;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameCabinet {
+    height: auto;
+    min-height: 0;
+    padding: 0.34rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .canvasWrap {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 50% 18%, rgba(143, 255, 45, 0.08), transparent 32%),
+      rgba(4, 5, 6, 0.58);
+  }
+
+  .gamePage:has(.lobbyCabinet) .canvasWrap::after,
+  .gamePage:has(.lobbyCabinet) .gameCanvas {
+    display: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay {
+    position: relative;
+    inset: auto;
+    gap: 0.4rem;
+    padding: 0.52rem;
+    overflow: visible;
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.42)),
+      transparent;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay > span {
+    font-size: 0.52rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay h2 {
+    max-width: 12ch;
+    font-size: clamp(1.9rem, 11vw, 3rem);
+    line-height: 0.82;
+  }
+
+  .gamePage:has(.lobbyCabinet) .readyMenu {
+    width: 100%;
+    max-height: none;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    overflow: visible;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuAccessPanel {
+    order: 1;
+    gap: 0.46rem;
+    padding: 0.56rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuSkinPanel {
+    order: 2;
+    padding: 0.48rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuIntro {
+    gap: 0.18rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuIntro strong {
+    font-size: clamp(1.2rem, 7vw, 1.9rem);
+  }
+
+  .gamePage:has(.lobbyCabinet) .holderRunCard,
+  .gamePage:has(.lobbyCabinet) .guestRunCard {
+    gap: 0.34rem;
+    padding: 0.5rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry {
+    gap: 0.24rem;
+    padding: 0.4rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry input,
+  .gamePage:has(.lobbyCabinet) .walletEntry .startButton,
+  .gamePage:has(.lobbyCabinet) .primaryRunButton,
+  .gamePage:has(.lobbyCabinet) .bountyRunButton {
+    min-height: 2.28rem;
+    font-size: 0.56rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinSelector {
+    gap: 0.36rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinTitle {
+    font-size: 0.72rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinSubtitle {
+    font-size: 0.46rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinGrid {
+    display: flex;
+    gap: 0.38rem;
+    overflow-x: auto;
+    padding: 0.08rem 0 0.2rem;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButton {
+    width: 5.3rem;
+    min-width: 5.3rem;
+    min-height: 5.65rem;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.22rem;
+    padding: 0.36rem 0.3rem;
+    scroll-snap-align: start;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinPreview,
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected .skinPreview {
+    grid-row: auto;
+    width: 2.55rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButton span {
+    align-self: auto;
+    width: 100%;
+    color: #f8f7ef;
+    font-size: 0.54rem;
+    text-align: center;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected span {
+    color: #101010;
+    text-shadow: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinUnlock {
+    justify-self: center;
+    max-width: 100%;
+    padding: 0.18rem 0.34rem;
+    font-size: 0.42rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    padding-bottom: calc(3.08rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    position: fixed;
+    top: auto;
+    bottom: calc(0.46rem + env(safe-area-inset-bottom, 0px));
+    z-index: 56;
+    height: 2.28rem;
+    min-height: 2.28rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+      rgba(3, 4, 6, 0.88);
+    box-shadow:
+      0 9px 20px rgba(0, 0, 0, 0.42),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    left: 0.58rem;
+    right: calc(50% + 0.18rem);
+    display: flex;
+    align-items: stretch;
+    margin: 0;
+    padding: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    left: calc(50% + 0.18rem);
+    right: 0.58rem;
+    width: auto;
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    color: #f8f7ef;
+    font-size: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-left: 3px solid #8dde3e;
+    border-radius: 12px;
+    color: #8dde3e;
+    background: transparent;
+    box-shadow: none;
+    font-size: 0.56rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before {
+    content: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before {
+    content: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    content: "BOUNTY BOARD";
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    border-left: 3px solid #b357ff;
+    border-radius: 12px;
+    color: #f8f7ef;
+    font-size: 0.56rem;
+    line-height: 1;
+  }
+
+  .gamePage:has(.pauseActions) .gameActions,
+  .gamePage:has(.pauseActions) .leaderboardMobileOpen,
+  .gamePage:has(.deathOverlay) .gameActions,
+  .gamePage:has(.deathOverlay) .leaderboardMobileOpen {
+    display: none;
+  }
+
+  .gamePage:has(.pauseActions) .gameOverlay {
+    background:
+      radial-gradient(circle at 50% 18%, rgba(143, 255, 45, 0.1), transparent 28%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.82), rgba(2, 3, 5, 0.94));
+  }
+
+  .pauseActions {
+    width: min(100%, 18rem);
+    gap: 0.42rem;
+  }
+
+  .pauseActions .startButton {
+    min-height: 2.5rem;
+    border-radius: 12px;
+    font-size: 0.62rem;
+  }
+
+  .gamePage:has(.deathOverlay) {
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .deathOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    place-items: stretch;
+    align-content: start;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    gap: 0.34rem;
+    padding: calc(0.62rem + env(safe-area-inset-top, 0px)) 0.62rem calc(0.72rem + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(179, 87, 255, 0.22), transparent 30%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.96), rgba(2, 3, 5, 0.99));
+  }
+
+  .deathOverlay .resultPanel,
+  .deathOverlay .profileEntryPanel,
+  .deathOverlay .postDeathVerify,
+  .deathOverlay .runUnlockSummary {
+    max-width: 23rem;
+    justify-self: center;
+  }
+
+  .deathOverlay .deathActions {
+    width: 100%;
+    max-width: 23rem;
+    grid-template-columns: 1fr;
+    gap: 0.38rem;
+  }
+
+  .deathOverlay .deathActions .startButton {
+    min-height: 2.34rem;
+    border-radius: 12px;
+    font-size: 0.56rem;
+  }
+
+  .leaderboardModal {
+    z-index: 150;
+    padding: calc(0.5rem + env(safe-area-inset-top, 0px)) 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .leaderboardModalBackdrop {
+    background: rgba(0, 0, 0, 0.72);
+  }
+
+  .leaderboardModalPanel {
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.96);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+  }
+
+  .leaderboardModalTop {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.48);
+  }
+
+  .leaderboardModalTop strong {
+    color: #b357ff;
+  }
+
+  .leaderboardModalTop button {
+    min-height: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f8f7ef;
+    background: rgba(179, 87, 255, 0.26);
+    box-shadow: none;
+  }
+}
+
+/* Dedicated mobile game UI system. This intentionally overrides older responsive patches. */
+@media (max-width: 760px) {
+  .gamePage {
+    --mobile-panel: rgba(5, 7, 10, 0.84);
+    --mobile-panel-soft: rgba(12, 15, 20, 0.72);
+    --mobile-line: rgba(255, 255, 255, 0.12);
+    --mobile-green: #8dde3e;
+    --mobile-blue: #2f75e8;
+    --mobile-purple: #a22ccf;
+    --mobile-yellow: #f2c73a;
+    padding: 0.34rem;
+    background:
+      radial-gradient(circle at 50% 18%, rgba(141, 222, 62, 0.13), transparent 32%),
+      linear-gradient(180deg, rgba(5, 7, 10, 0.52), rgba(2, 3, 5, 0.96)),
+      url("/game/backgrounds/bg-01-backalley.webp") center / cover no-repeat,
+      #050506;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .gameLayout {
+    width: 100%;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .gameCabinet,
+  .gateCard,
+  .leaderboardModalPanel {
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      var(--mobile-panel);
+    box-shadow:
+      0 18px 38px rgba(0, 0, 0, 0.52),
+      inset 0 0 0 1px rgba(141, 222, 62, 0.05);
+    outline: 0;
+  }
+
+  .gameCabinet {
+    padding: 0.34rem;
+  }
+
+  .gameHud {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.22rem;
+    margin-bottom: 0.32rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .hudCell {
+    min-height: 2.62rem;
+    align-content: center;
+    gap: 0.16rem;
+    padding: 0.36rem 0.38rem;
+    border: 1px solid var(--mobile-line);
+    border-radius: 10px;
+    color: rgba(247, 242, 223, 0.7);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.014)),
+      rgba(2, 3, 5, 0.86);
+    box-shadow: inset 0 -3px 0 rgba(141, 222, 62, 0.06);
+    font-size: clamp(0.46rem, 2.4vw, 0.62rem);
+  }
+
+  .hudCell strong {
+    color: var(--mobile-green);
+    font-size: clamp(0.72rem, 4vw, 0.98rem);
+    line-height: 1;
+    text-shadow: 0 0 9px rgba(141, 222, 62, 0.2);
+  }
+
+  .hudCell:nth-of-type(2) strong {
+    color: #b764ff;
+  }
+
+  .hudCell:nth-of-type(3) strong {
+    color: #ffbd34;
+  }
+
+  .gamePage:has(.lobbyCabinet) {
+    height: auto;
+    min-height: 100svh;
+    overflow-y: auto;
+    padding-bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameCabinet {
+    height: auto;
+    min-height: 0;
+    padding: 0.34rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .canvasWrap {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .canvasWrap::after,
+  .gamePage:has(.lobbyCabinet) .gameCanvas {
+    display: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay {
+    position: relative;
+    inset: auto;
+    align-content: start;
+    gap: 0.5rem;
+    padding: 0.56rem;
+    overflow: visible;
+    background: transparent;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay > span {
+    color: var(--mobile-green);
+    font-size: 0.52rem;
+    line-height: 1;
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay h2 {
+    max-width: 12ch;
+    color: #f8f7ef;
+    font-size: clamp(2.05rem, 12vw, 3.35rem);
+    line-height: 0.82;
+    text-shadow:
+      4px 5px 0 #000,
+      0 0 20px rgba(141, 222, 62, 0.12);
+  }
+
+  .gamePage:has(.lobbyCabinet) .gameOverlay > p {
+    display: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .readyMenu {
+    width: 100%;
+    max-height: none;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.56rem;
+    overflow: visible;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuAccessPanel,
+  .gamePage:has(.lobbyCabinet) .menuSkinPanel,
+  .gamePage:has(.lobbyCabinet) .holderRunCard,
+  .gamePage:has(.lobbyCabinet) .guestRunCard,
+  .gamePage:has(.lobbyCabinet) .holderTerminal,
+  .gamePage:has(.lobbyCabinet) .walletEntry {
+    border: 1px solid var(--mobile-line);
+    border-radius: 14px;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.014)),
+      var(--mobile-panel-soft);
+    box-shadow: none;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuAccessPanel {
+    order: 1;
+    gap: 0.54rem;
+    padding: 0.56rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuSkinPanel {
+    order: 2;
+    padding: 0.54rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuIntro {
+    gap: 0.14rem;
+    text-align: left;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuIntro span {
+    color: var(--mobile-green);
+    font-size: 0.52rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .menuIntro strong {
+    color: #f8f7ef;
+    font-size: clamp(1.25rem, 7vw, 1.9rem);
+    text-shadow: 3px 3px 0 #000;
+  }
+
+  .gamePage:has(.lobbyCabinet) .holderRunCard,
+  .gamePage:has(.lobbyCabinet) .guestRunCard {
+    gap: 0.44rem;
+    padding: 0.58rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .runCardHeader strong,
+  .gamePage:has(.lobbyCabinet) .walletEntry span {
+    color: var(--mobile-green);
+    font-size: 0.58rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .guestRunCard .runCardHeader strong {
+    color: #62a4ff;
+  }
+
+  .gamePage:has(.lobbyCabinet) .runCardHeader small {
+    color: rgba(247, 242, 223, 0.58);
+    font-size: 0.5rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry {
+    gap: 0.32rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.38rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry input,
+  .gamePage:has(.lobbyCabinet) .nameEntry input {
+    height: 3.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    color: #f7f2df;
+    background: rgba(0, 0, 0, 0.58);
+    font-size: 0.7rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry input::placeholder,
+  .gamePage:has(.lobbyCabinet) .nameEntry input::placeholder {
+    color: rgba(247, 242, 223, 0.35);
+  }
+
+  .gamePage:has(.lobbyCabinet) .startButton,
+  .gamePage:has(.lobbyCabinet) .primaryRunButton,
+  .gamePage:has(.lobbyCabinet) .bountyRunButton {
+    min-height: 3.15rem;
+    border-radius: 16px;
+    font-size: 0.72rem;
+    line-height: 1;
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.34),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+  }
+
+  .gamePage:has(.lobbyCabinet) .walletEntry .startButton,
+  .gamePage:has(.lobbyCabinet) .bountyRunButton {
+    color: #101010;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent),
+      var(--mobile-green);
+  }
+
+  .gamePage:has(.lobbyCabinet) .primaryRunButton {
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent),
+      var(--mobile-blue);
+  }
+
+  .gamePage:has(.lobbyCabinet) .bountyRunButton:disabled,
+  .gamePage:has(.lobbyCabinet) .startButton:disabled {
+    color: rgba(247, 242, 223, 0.5);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent),
+      rgba(64, 64, 64, 0.72);
+  }
+
+  .gamePage:has(.lobbyCabinet) .orDivider {
+    color: rgba(247, 242, 223, 0.66);
+    font-size: 0.58rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinSelector {
+    gap: 0.42rem;
+    padding: 0;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinTitle {
+    color: var(--mobile-green);
+    font-size: 0.74rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinSubtitle {
+    color: rgba(247, 242, 223, 0.56);
+    font-size: 0.5rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinGrid {
+    display: flex;
+    gap: 0.48rem;
+    overflow-x: auto;
+    padding: 0.08rem 0 0.2rem;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButton {
+    width: 6rem;
+    min-width: 6rem;
+    min-height: 6.6rem;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 0.28rem;
+    padding: 0.46rem 0.36rem;
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.014)),
+      rgba(2, 3, 5, 0.62);
+    scroll-snap-align: start;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected {
+    border-color: rgba(141, 222, 62, 0.9);
+    background:
+      radial-gradient(circle at 50% 32%, rgba(141, 222, 62, 0.22), transparent 48%),
+      rgba(7, 18, 8, 0.86);
+    box-shadow:
+      0 0 0 1px rgba(141, 222, 62, 0.22),
+      0 0 22px rgba(141, 222, 62, 0.12);
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinPreview,
+  .gamePage:has(.lobbyCabinet) .skinButtonSelected .skinPreview {
+    grid-row: auto;
+    width: 3rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButton span {
+    align-self: auto;
+    width: 100%;
+    color: #f8f7ef;
+    font-size: 0.62rem;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinUnlock {
+    justify-self: center;
+    max-width: 100%;
+    padding: 0.2rem 0.38rem;
+    color: var(--mobile-green);
+    background: rgba(141, 222, 62, 0.1);
+    font-size: 0.48rem;
+  }
+
+  .gamePage:has(.lobbyCabinet) .skinButtonLocked {
+    opacity: 0.62;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) {
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameLayout,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gatedGame,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    padding: 0.34rem;
+    padding-bottom: calc(4.2rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .canvasWrap {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCanvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .soundToggle {
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 18;
+    width: 2.2rem;
+    min-width: 2.2rem;
+    min-height: 2.2rem;
+    border-radius: 999px;
+    background: rgba(3, 4, 6, 0.78);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    position: fixed;
+    top: auto;
+    bottom: calc(0.52rem + env(safe-area-inset-bottom, 0px));
+    z-index: 56;
+    height: 3.5rem;
+    min-height: 3.5rem;
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.014)),
+      rgba(3, 4, 6, 0.9);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.48);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    left: 0.58rem;
+    right: calc(50% + 0.24rem);
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    margin: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    left: calc(50% + 0.24rem);
+    right: 0.58rem;
+    width: auto;
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-left: 4px solid var(--mobile-green);
+    border-radius: 16px;
+    color: var(--mobile-green);
+    background: transparent;
+    box-shadow: none;
+    font-size: 0.68rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before {
+    content: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    content: "BOUNTY";
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    border-left: 4px solid var(--mobile-purple);
+    border-radius: 16px;
+    color: #f8f7ef;
+    font-size: 0.68rem;
+    line-height: 1;
+  }
+
+  .gamePage:has(.pauseActions) .gameActions,
+  .gamePage:has(.pauseActions) .leaderboardMobileOpen,
+  .gamePage:has(.deathOverlay) .gameActions,
+  .gamePage:has(.deathOverlay) .leaderboardMobileOpen,
+  .gamePage:has(.gamePreloader) .leaderboardMobileOpen {
+    display: none;
+  }
+
+  .gamePage:has(.pauseActions) .gameOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background:
+      radial-gradient(circle at 50% 24%, rgba(141, 222, 62, 0.14), transparent 30%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.9), rgba(2, 3, 5, 0.98));
+  }
+
+  .pauseActions {
+    width: min(100%, 20rem);
+    display: grid;
+    gap: 0.54rem;
+    padding: 0.72rem;
+    border: 1px solid var(--mobile-line);
+    border-radius: 18px;
+    background: var(--mobile-panel);
+  }
+
+  .pauseActions .startButton {
+    width: 100%;
+    min-height: 3.25rem;
+    border-radius: 16px;
+    font-size: 0.72rem;
+  }
+
+  .deathOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 125;
+    display: grid;
+    place-items: stretch;
+    align-content: start;
+    gap: 0.42rem;
+    padding: calc(0.7rem + env(safe-area-inset-top, 0px)) 0.7rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(179, 87, 255, 0.2), transparent 32%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.97), rgba(2, 3, 5, 0.995));
+  }
+
+  .deathOverlay > span {
+    justify-self: center;
+    font-size: 0.58rem;
+  }
+
+  .deathOverlay h2 {
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+
+  .deathOverlay .resultPanel,
+  .deathOverlay .profileEntryPanel,
+  .deathOverlay .postDeathVerify,
+  .deathOverlay .runUnlockSummary {
+    width: 100%;
+    max-width: 24rem;
+    justify-self: center;
+    border: 1px solid var(--mobile-line);
+    border-radius: 16px;
+    background: var(--mobile-panel-soft);
+  }
+
+  .deathOverlay .resultPanel dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.42rem;
+  }
+
+  .deathOverlay .resultPanel dl div {
+    min-height: 4rem;
+    border-radius: 14px;
+  }
+
+  .deathOverlay .resultPanel dl div:first-child {
+    grid-column: 1 / -1;
+    min-height: 5.2rem;
+  }
+
+  .deathOverlay .resultPanel dl div:first-child dd {
+    font-size: clamp(1.55rem, 9vw, 2.25rem);
+  }
+
+  .deathOverlay .walletEntry input,
+  .deathOverlay .nameEntry input,
+  .deathOverlay .walletEntry .startButton {
+    min-height: 3rem;
+    border-radius: 16px;
+    font-size: 0.68rem;
+  }
+
+  .deathOverlay .deathActions {
+    width: 100%;
+    max-width: 24rem;
+    justify-self: center;
+    grid-template-columns: 1fr;
+    gap: 0.48rem;
+  }
+
+  .deathOverlay .deathActions .startButton {
+    min-height: 3.1rem;
+    border-radius: 16px;
+    font-size: 0.66rem;
+  }
+
+  .leaderboardModal {
+    z-index: 150;
+    padding: calc(0.54rem + env(safe-area-inset-top, 0px)) 0.54rem calc(0.54rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .leaderboardModalPanel {
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    color: #f7f2df;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.98);
+  }
+
+  .leaderboardModalTop {
+    min-height: 3.7rem;
+    border-bottom: 1px solid var(--mobile-line);
+    background: rgba(0, 0, 0, 0.46);
+  }
+
+  .leaderboardModalTop strong {
+    color: #b764ff;
+    font-size: 0.82rem;
+  }
+
+  .leaderboardModalTop button {
+    min-height: 2.55rem;
+    border-radius: 14px;
+    color: #f8f7ef;
+    background: rgba(179, 87, 255, 0.28);
+  }
+}
+
+/* Final hard reset for mobile bottom controls: no pseudo icons, no cut-off accents. */
+@media (max-width: 760px) {
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    left: 0.62rem;
+    right: calc(50% + 0.24rem);
+    bottom: calc(0.58rem + env(safe-area-inset-bottom, 0px));
+    height: 3.35rem;
+    min-height: 3.35rem;
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen {
+    left: calc(50% + 0.24rem);
+    right: 0.62rem;
+    bottom: calc(0.58rem + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    min-width: 0;
+    height: 3.35rem;
+    min-height: 3.35rem;
+    padding: 0;
+    border: 1px solid rgba(179, 87, 255, 0.44);
+    border-radius: 16px;
+    color: #f8f7ef;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      #090910;
+    box-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.48),
+      inset 0 0 0 1px rgba(179, 87, 255, 0.08);
+    font-size: 0.7rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    width: 100%;
+    height: 3.35rem;
+    min-width: 0;
+    min-height: 3.35rem;
+    padding: 0;
+    border: 1px solid rgba(141, 222, 62, 0.44);
+    border-radius: 16px;
+    color: var(--mobile-green);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      #090f09;
+    box-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.48),
+      inset 0 0 0 1px rgba(141, 222, 62, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::after,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    content: none;
+    display: none;
+  }
+}
+
+/* Real mobile gameplay action bar: both controls live in one grid. */
+@media (max-width: 760px) {
+  .mobileBountyButton {
+    display: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    padding-bottom: 0.34rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    position: static;
+    width: 100%;
+    height: 3.45rem;
+    min-height: 3.45rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin: 0.46rem 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton {
+    width: 100%;
+    height: 3.45rem;
+    min-width: 0;
+    min-height: 3.45rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+      #090910;
+    box-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.44),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+    font-size: 0.7rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    border: 1px solid rgba(141, 222, 62, 0.44);
+    color: var(--mobile-green);
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton {
+    border: 1px solid rgba(179, 87, 255, 0.48);
+    color: #f8f7ef;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::after,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton::after {
+    content: none;
+    display: none;
+  }
+}
+
+/* Final pause overlay colors across desktop and mobile. */
+.gamePage:has(.pauseActions) .gameOverlay > span {
+  color: #8dde3e;
+  background: rgba(0, 0, 0, 0.62);
+  text-shadow: 0 0 10px rgba(141, 222, 62, 0.3);
+}
+
+.gamePage:has(.pauseActions) .gameOverlay h2 {
+  color: #f8f7ef;
+  text-shadow:
+    4px 5px 0 #000,
+    0 0 18px rgba(255, 255, 255, 0.14);
+}
+
+.gamePage:has(.pauseActions) .gameOverlay > p {
+  color: rgba(247, 242, 223, 0.86);
+  background: rgba(0, 0, 0, 0.52);
+}
+
+.gamePage:has(.pauseActions) .pauseActions {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(5, 6, 8, 0.86);
+}
+
+.gamePage:has(.pauseActions) .pauseActions .startButton {
+  min-height: 3.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.32),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+  font-size: 0.72rem;
+}
+
+.gamePage:has(.pauseActions) .pauseResumeButton {
+  color: #101010;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), transparent),
+    #8dde3e;
+}
+
+.gamePage:has(.pauseActions) .pauseHomeButton {
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+    #2f75e8;
+}
+
+.gamePage:has(.pauseActions) .pauseRestartButton {
+  color: #f8f7ef;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent),
+    #a22ccf;
 }

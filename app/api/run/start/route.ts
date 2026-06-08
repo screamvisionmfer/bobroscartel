@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   let ipLimit;
 
   try {
-    ipLimit = await checkRateLimit({ namespace: "run-start-ip", key: clientIp, limit: 40, windowMs: 5 * 60_000 });
+    ipLimit = await checkRateLimit({ namespace: "run-start-ip", key: clientIp, limit: 120, windowMs: 5 * 60_000 });
   } catch {
     return jsonError("Run sessions unavailable", 503);
   }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       walletLimit = await checkRateLimit({
         namespace: "run-start-wallet",
         key: `${clientIp}:${wallet}`,
-        limit: 12,
+        limit: 60,
         windowMs: 5 * 60_000,
       });
     } catch {

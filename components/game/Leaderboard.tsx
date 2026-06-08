@@ -17,6 +17,7 @@ type LeaderboardEntry = {
 };
 
 type LeaderboardResponse = {
+  error?: string;
   weekId: string;
   weekEndsAt?: string;
   serverTime?: string;
@@ -24,6 +25,32 @@ type LeaderboardResponse = {
   playerBestToday: number;
   playerBestWeekly: number;
   entries: LeaderboardEntry[];
+};
+
+function normalizeLeaderboardResponse(data: unknown): LeaderboardResponse {
+  const payload = typeof data === "object" && data !== null ? (data as Partial<LeaderboardResponse>) : {};
+
+  return {
+    error: typeof payload.error === "string" ? payload.error : undefined,
+    weekId: typeof payload.weekId === "string" ? payload.weekId : "UNAVAILABLE",
+    weekEndsAt: typeof payload.weekEndsAt === "string" ? payload.weekEndsAt : undefined,
+    serverTime: typeof payload.serverTime === "string" ? payload.serverTime : undefined,
+    scope: payload.scope === "all-time" ? "all-time" : "weekly",
+    playerBestToday: typeof payload.playerBestToday === "number" && Number.isFinite(payload.playerBestToday) ? payload.playerBestToday : 0,
+    playerBestWeekly: typeof payload.playerBestWeekly === "number" && Number.isFinite(payload.playerBestWeekly) ? payload.playerBestWeekly : 0,
+    entries: Array.isArray(payload.entries) ? payload.entries : [],
+  };
+}
+
+const skinAvatarPaths: Record<string, string> = {
+  "bobro-head": "/game/heads/bobro-head.png",
+  bobohazard: "/game/heads/bobohazard.png",
+  "high-bobo": "/game/heads/high-bobo.png",
+  luchador: "/game/heads/luchador.png",
+  skelebobo: "/game/heads/skelebobo.png",
+  diamondbobo: "/game/heads/diamondbobo.png",
+  "og-rekt": "/game/heads/og-rekt.png",
+  theoneape: "/game/heads/theoneape.png",
 };
 
 function formatMarketCap(score: number) {
@@ -87,10 +114,14 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
       try {
         const params = walletAddress ? `?wallet=${encodeURIComponent(walletAddress)}` : "";
         const response = await fetch(`/api/leaderboard${params}`, { cache: "no-store" });
-        const data = (await response.json()) as LeaderboardResponse;
+        const data = normalizeLeaderboardResponse(await response.json());
 
         if (!isCancelled) {
           setLeaderboard(data);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLeaderboard(normalizeLeaderboardResponse({ error: "Leaderboard unavailable" }));
         }
       } finally {
         if (!isCancelled) {
@@ -106,14 +137,15 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
     };
   }, [refreshKey, walletAddress]);
 
-  const visibleEntries = leaderboard?.entries.slice(0, showTopTen ? 10 : 5) ?? [];
+  const entries = Array.isArray(leaderboard?.entries) ? leaderboard.entries : [];
+  const visibleEntries = entries.slice(0, showTopTen ? 10 : 5);
   const resetCountdown = getResetCountdown(leaderboard?.weekEndsAt, leaderboard?.serverTime);
 
   return (
     <aside className={styles.leaderboard} aria-label="Weekly leaderboard">
       <div className={styles.leaderboardHeader}>
         <span className={styles.kicker}>Current Week: {leaderboard?.weekId ?? "LOADING"}</span>
-        <h2>BOUNTY BOARD</h2>
+        <h2>WEEKLY BOUNTY BOARD</h2>
         <small>Manual review before rewards</small>
       </div>
 
@@ -121,13 +153,12 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
         <h3>WEEKLY REWARDS</h3>
         <p>
           <span>#1</span>
-          <strong>2 Bobros NFT</strong>
+          <strong>Bobros NFT</strong>
         </p>
         <p>
           <span>Top 3</span>
-          <strong>Whitelist spots with special mint price</strong>
+          <strong>Whitelist spots</strong>
         </p>
-      
       </section>
 
       <div className={styles.weekReset}>
@@ -147,35 +178,34 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
           visibleEntries.map((entry) => (
             <article className={styles.leaderboardRow} key={entry.wallet}>
               <strong>#{entry.rank}</strong>
+              <img className={styles.leaderboardAvatar} src={skinAvatarPaths[entry.selectedSkin ?? ""] ?? skinAvatarPaths["bobro-head"]} alt="" aria-hidden="true" />
               <div>
-                <span>
-                  {entry.displayName || "ANON BOBRO"}
-                  {entry.xHandle ? (
-                    <a className={styles.xHandleLink} href={getXUrl(entry.xHandle)} target="_blank" rel="noopener noreferrer" aria-label={`Open @${entry.xHandle} on X`}>
-                      X
-                    </a>
-                  ) : null}
-                </span>
-                <small>{shortenWallet(entry.wallet)} / {entry.bobrosCount} BOBRO HOLDER</small>
+                <span>{entry.displayName || "ANON BOBRO"}</span>
+                {entry.xHandle ? (
+                  <a className={styles.xHandleText} href={getXUrl(entry.xHandle)} target="_blank" rel="noopener noreferrer" aria-label={`Open @${entry.xHandle} on X`}>
+                    @{entry.xHandle}
+                  </a>
+                ) : null}
+                <small>{shortenWallet(entry.wallet)}</small>
               </div>
               <b>{entry.formattedMcap || formatMarketCap(entry.score)}</b>
             </article>
           ))
+        ) : leaderboard?.error ? (
+          <div className={styles.leaderboardEmpty}>BOUNTY BOARD OFFLINE</div>
         ) : (
           <div className={styles.leaderboardEmpty}>NO SCORES YET</div>
         )}
       </div>
 
-      {!isLoading && leaderboard && leaderboard.entries.length > 5 ? (
+      {!isLoading && entries.length > 5 ? (
         <button className={styles.leaderboardToggle} type="button" onClick={() => setShowTopTen((current) => !current)}>
-          {showTopTen ? "SHOW TOP 5" : "VIEW TOP 10"}
+          {showTopTen ? "SHOW TOP 5" : "VIEW FULL BOARD"}
         </button>
       ) : null}
 
-      <section className={styles.rewardPanel} aria-label="Weekly rewards">
-        <h3></h3>
-        
-        <strong>Rewards reset weekly. Entries are reviewed before rewards are distributed. Weekly Rewards only for Bobro holders.</strong>
+      <section className={styles.rewardPanel} aria-label="Weekly review note">
+        <strong>Holder wallet required. Entries reviewed before rewards.</strong>
       </section>
     </aside>
   );
