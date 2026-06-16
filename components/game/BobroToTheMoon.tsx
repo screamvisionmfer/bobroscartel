@@ -5787,6 +5787,13 @@ ${shareUrl}`;
     setNameError("");
   }, [playerName]);
 
+  const commitProfileFields = useCallback(() => {
+    commitPlayerName();
+    if (mode === "holder" && (runResult?.saved || saveStatus === "saved")) {
+      void updateSavedBountyProfile();
+    }
+  }, [commitPlayerName, mode, runResult?.saved, saveStatus, updateSavedBountyProfile]);
+
   const selectedHeadOption = getHeadOption(selectedHead);
   const result = runResult;
   const challengeWon = Boolean(challengeRun && result && result.score > challengeRun.score);
@@ -6133,7 +6140,7 @@ ${shareUrl}`;
                         maxLength={16}
                         value={playerName}
                         onChange={(event) => updatePlayerName(event.target.value)}
-                        onBlur={commitPlayerName}
+                        onBlur={commitProfileFields}
                         aria-invalid={Boolean(nameError)}
                       />
                     </label>
@@ -6146,6 +6153,7 @@ ${shareUrl}`;
                         maxLength={15}
                         value={xHandle}
                         onChange={(event) => setXHandle(normalizeXHandle(event.target.value))}
+                        onBlur={commitProfileFields}
                         placeholder="optional"
                       />
                     </label>
@@ -6209,45 +6217,45 @@ ${shareUrl}`;
             ) : null}
             {hud.status === "dead" && result && challengeRun ? (
               <div className={styles.deathActions}>
-                <button className={styles.startButton} type="button" onClick={shareChallenge}>
+                <button className={`${styles.startButton} ${styles.shareAction}`} type="button" onClick={shareChallenge}>
                   SHARE RESULT
                 </button>
-                <button className={styles.startButton} type="button" onClick={() => void copyChallengeLink()}>
+                <button className={`${styles.startButton} ${styles.challengeAction}`} type="button" onClick={() => void copyChallengeLink()}>
                   {challengeStatus === "copied" ? "LINK COPIED" : "COPY CHALLENGE LINK"}
                 </button>
-                <button className={styles.startButton} type="button" onClick={startChallengeRun}>
+                <button className={`${styles.startButton} ${styles.runAgainAction}`} type="button" onClick={startChallengeRun}>
                   PLAY AGAIN
                 </button>
-                <a className={styles.startButton} href="/game">
+                <a className={`${styles.startButton} ${styles.neutralAction}`} href="/game">
                   BACK TO NORMAL GAME
                 </a>
               </div>
             ) : hud.status === "dead" && result ? (
               <div className={styles.deathActions}>
-                <button className={styles.startButton} type="button" onClick={() => void saveRunToBountyBoard()} disabled={!canSaveRun || saveStatus === "saving"}>
+                <button className={`${styles.startButton} ${styles.saveProfileAction}`} type="button" onClick={() => void saveRunToBountyBoard()} disabled={!canSaveRun || saveStatus === "saving"}>
                   {canSaveRun ? saveButtonLabel : "HOLDER WALLET REQUIRED"}
                 </button>
-                <button className={styles.startButton} type="button" onClick={shareRunOnX}>
+                <button className={`${styles.startButton} ${styles.shareAction}`} type="button" onClick={shareRunOnX}>
                   {result.saved ? "SHARE SCORE ON X" : "SHARE ON X"}
                 </button>
-                <button className={styles.startButton} type="button" onClick={downloadScoreCard}>
+                <button className={`${styles.startButton} ${styles.downloadAction}`} type="button" onClick={downloadScoreCard}>
                   DOWNLOAD SCORE CARD
                 </button>
                 {createdChallenge ? (
                   <>
-                    <button className={styles.startButton} type="button" onClick={() => void copyChallengeLink()}>
+                    <button className={`${styles.startButton} ${styles.challengeAction}`} type="button" onClick={() => void copyChallengeLink()}>
                       {challengeStatus === "copied" ? "LINK COPIED" : "COPY LINK"}
                     </button>
-                    <button className={styles.startButton} type="button" onClick={shareChallenge}>
+                    <button className={`${styles.startButton} ${styles.challengeAction}`} type="button" onClick={shareChallenge}>
                       SHARE CHALLENGE
                     </button>
                   </>
                 ) : (
-                  <button className={styles.startButton} type="button" onClick={() => void createChallenge()} disabled={challengeStatus === "creating"}>
+                  <button className={`${styles.startButton} ${styles.challengeAction}`} type="button" onClick={() => void createChallenge()} disabled={challengeStatus === "creating"}>
                     {challengeStatus === "creating" ? "CREATING..." : "CREATE CHALLENGE"}
                   </button>
                 )}
-                <button className={styles.startButton} type="button" onClick={returnToStartScreen}>
+                <button className={`${styles.startButton} ${styles.runAgainAction}`} type="button" onClick={returnToStartScreen}>
                   RUN AGAIN
                 </button>
               </div>

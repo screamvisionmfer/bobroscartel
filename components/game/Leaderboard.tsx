@@ -152,12 +152,12 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
       <section className={styles.rewardPanel} aria-label="Weekly rewards">
         <h3>WEEKLY REWARDS</h3>
         <p>
-          <span>#1</span>
-          <strong>Bobros NFT</strong>
+          <span>🏆 #1</span>
+          <strong>2 BOBROS NFT</strong>
         </p>
         <p>
-          <span>Top 3</span>
-          <strong>Whitelist spots</strong>
+          <span>🔥 TOP 3</span>
+          <strong>SPECIAL WL PRICE</strong>
         </p>
       </section>
 
@@ -166,10 +166,12 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
         <strong>{resetCountdown}</strong>
       </div>
 
-      <div className={styles.playerBest}>
-        <span>{walletAddress ? "Your Holder Best This Week" : "Connect Holder Wallet"}</span>
-        <strong>{walletAddress ? formatMarketCap(leaderboard?.playerBestWeekly ?? leaderboard?.playerBestToday ?? 0) : "LOCAL ONLY"}</strong>
-      </div>
+      {walletAddress ? (
+        <div className={styles.playerBest}>
+          <span>Your Holder Best This Week</span>
+          <strong>{formatMarketCap(leaderboard?.playerBestWeekly ?? leaderboard?.playerBestToday ?? 0)}</strong>
+        </div>
+      ) : null}
 
       <div className={styles.leaderboardList}>
         {isLoading ? (
@@ -205,7 +207,7 @@ export default function Leaderboard({ refreshKey, walletAddress }: { refreshKey:
       ) : null}
 
       <section className={styles.rewardPanel} aria-label="Weekly review note">
-        <strong>Holder wallet required. Entries reviewed before rewards.</strong>
+        <strong>Holder scores only. Rewards manually reviewed.</strong>
       </section>
     </aside>
   );

@@ -4766,6 +4766,454 @@
     #a22ccf;
 }
 
+/* Final mobile UI pass: one button system, compact death flow, readable bounty modal. */
+@media (max-width: 760px) {
+  .gamePage .startButton,
+  .gamePage .pauseButton,
+  .gamePage .mobileBountyButton,
+  .gamePage .leaderboardMobileOpen,
+  .gamePage .leaderboardToggle,
+  .gamePage .leaderboardModalTop button,
+  .gamePage .walletEntry .startButton {
+    min-height: 3.15rem;
+    height: auto;
+    padding: 0.7rem 0.9rem;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.68rem;
+    line-height: 1.05;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: normal;
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.36),
+      inset 0 -3px 0 rgba(0, 0, 0, 0.22);
+  }
+
+  .gamePage .startButton:disabled,
+  .gamePage .pauseButton:disabled,
+  .gamePage .walletEntry .startButton:disabled {
+    color: rgba(247, 242, 223, 0.42);
+    border-color: rgba(255, 255, 255, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+      #303035;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+  }
+
+  .gamePage .primaryRunButton,
+  .gamePage .runAgainAction,
+  .gamePage .walletEntry .startButton {
+    color: #101010;
+    border-color: rgba(141, 222, 62, 0.58);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.02)),
+      #8dde3e;
+  }
+
+  .gamePage .guestRunCard .startButton,
+  .gamePage .pauseHomeButton,
+  .gamePage .neutralAction {
+    color: #f8f7ef;
+    border-color: rgba(61, 133, 255, 0.52);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)),
+      #2f75e8;
+  }
+
+  .gamePage .mobileBountyButton,
+  .gamePage .leaderboardMobileOpen,
+  .gamePage .challengeAction {
+    color: #f8f7ef;
+    border-color: rgba(190, 76, 255, 0.62);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02)),
+      #982bd1;
+  }
+
+  .gamePage .shareAction,
+  .gamePage .downloadAction,
+  .gamePage .leaderboardToggle {
+    color: #101010;
+    border-color: rgba(255, 211, 53, 0.62);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.02)),
+      #ffd335;
+  }
+
+  .gamePage .saveProfileAction {
+    display: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameCabinet {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .gameActions {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.62rem;
+    margin: 0.58rem 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton {
+    width: 100%;
+    min-height: 3.3rem;
+    height: 3.3rem;
+    border-radius: 16px;
+    border-width: 1px;
+    border-style: solid;
+    font-size: 0.68rem;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton {
+    color: #8dde3e;
+    border-color: rgba(141, 222, 62, 0.48);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.015)),
+      #090f09;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton {
+    color: #f8f7ef;
+    border-color: rgba(190, 76, 255, 0.55);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.015)),
+      #13091a;
+  }
+
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .pauseButton::after,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .mobileBountyButton::after,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::before,
+  .gamePage:has(.gameCabinet:not(.lobbyCabinet)) .leaderboardMobileOpen::after {
+    content: none;
+    display: none;
+  }
+
+  .gamePage:has(.pauseActions) .gameActions,
+  .gamePage:has(.deathOverlay) .gameActions,
+  .gamePage:has(.leaderboardModal) .gameActions,
+  .gamePage:has(.gamePreloader) .gameActions,
+  .gamePage:has(.pauseActions) .leaderboardMobileOpen,
+  .gamePage:has(.deathOverlay) .leaderboardMobileOpen,
+  .gamePage:has(.leaderboardModal) .leaderboardMobileOpen,
+  .gamePage:has(.gamePreloader) .leaderboardMobileOpen {
+    display: none !important;
+  }
+
+  .deathOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, auto) auto;
+    place-items: center;
+    align-content: start;
+    gap: 0.38rem;
+    padding: calc(0.58rem + env(safe-area-inset-top, 0px)) 0.58rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background:
+      radial-gradient(circle at 50% 10%, rgba(179, 87, 255, 0.16), transparent 30%),
+      linear-gradient(180deg, rgba(2, 3, 5, 0.9), rgba(2, 3, 5, 0.97));
+  }
+
+  .deathOverlay > span {
+    font-size: 0.54rem;
+    color: #b764ff;
+  }
+
+  .deathOverlay h2 {
+    margin: 0;
+    font-size: clamp(2rem, 10.5vw, 3rem);
+    line-height: 0.82;
+  }
+
+  .deathOverlay > p {
+    margin: 0;
+    padding: 0.24rem 0.48rem;
+    border-radius: 999px;
+    color: #ffd335;
+    background: rgba(0, 0, 0, 0.42);
+    font-size: 0.58rem;
+  }
+
+  .deathOverlay .resultPanel {
+    width: min(100%, 24rem);
+    max-width: 24rem;
+    gap: 0.44rem;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.84);
+  }
+
+  .deathOverlay .resultPanel dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.36rem;
+  }
+
+  .deathOverlay .resultPanel dl div {
+    min-height: 3.05rem;
+    padding: 0.36rem 0.42rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .deathOverlay .resultPanel dl div:first-child {
+    min-height: 4.15rem;
+    background:
+      linear-gradient(180deg, rgba(141, 222, 62, 0.2), rgba(141, 222, 62, 0.07)),
+      rgba(5, 6, 8, 0.7);
+  }
+
+  .deathOverlay .resultPanel dt {
+    color: rgba(247, 242, 223, 0.58);
+    font-size: 0.5rem;
+  }
+
+  .deathOverlay .resultPanel dd {
+    color: #f8f7ef;
+    font-size: 0.64rem;
+  }
+
+  .deathOverlay .resultPanel dl div:first-child dd {
+    color: #8dde3e;
+    font-size: clamp(1.65rem, 9vw, 2.45rem);
+  }
+
+  .deathOverlay .profileEntryPanel,
+  .deathOverlay .postDeathVerify,
+  .deathOverlay .challengeResultBox {
+    width: 100%;
+    max-width: 24rem;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.42);
+  }
+
+  .deathOverlay .profileEntryPanel {
+    grid-template-columns: 1fr;
+    gap: 0.44rem;
+  }
+
+  .deathOverlay .nameEntry,
+  .deathOverlay .walletEntry {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.26rem;
+    color: #f8f7ef;
+  }
+
+  .deathOverlay .nameEntry span,
+  .deathOverlay .walletEntry span {
+    color: #8dde3e;
+    font-size: 0.54rem;
+    text-align: left;
+  }
+
+  .deathOverlay .nameEntry input,
+  .deathOverlay .walletEntry input {
+    width: 100%;
+    min-height: 3.05rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 16px;
+    color: #f8f7ef;
+    background: rgba(0, 0, 0, 0.68);
+    font-size: 0.68rem;
+  }
+
+  .deathOverlay .walletEntry div {
+    grid-template-columns: 1fr;
+    gap: 0.44rem;
+  }
+
+  .deathOverlay .deathActions {
+    width: min(100%, 24rem);
+    max-width: 24rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .deathOverlay .deathActions .startButton {
+    width: 100%;
+    min-height: 3.2rem;
+    border-radius: 16px;
+    font-size: 0.62rem;
+  }
+
+  .deathOverlay .runAgainAction {
+    order: 1;
+  }
+
+  .deathOverlay .challengeAction {
+    order: 2;
+  }
+
+  .deathOverlay .shareAction {
+    order: 3;
+  }
+
+  .deathOverlay .downloadAction {
+    order: 4;
+  }
+
+  .deathOverlay .neutralAction {
+    order: 5;
+    grid-column: 1 / -1;
+  }
+
+  .deathOverlay .saveConfirmation,
+  .deathOverlay .formError,
+  .deathOverlay .guestNote {
+    justify-self: center;
+    padding: 0.26rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.42);
+    font-size: 0.52rem;
+    text-align: center;
+  }
+
+  .deathOverlay .formError {
+    color: #ff6b6b;
+  }
+
+  .deathOverlay .saveConfirmation {
+    color: #8dde3e;
+  }
+
+  .leaderboardModal {
+    z-index: 150;
+    padding: calc(0.48rem + env(safe-area-inset-top, 0px)) 0.48rem calc(0.48rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .leaderboardModalPanel {
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(5, 6, 8, 0.98);
+  }
+
+  .leaderboardModalTop {
+    min-height: 3.2rem;
+    padding: 0.4rem 0.48rem 0.4rem 0.78rem;
+  }
+
+  .leaderboardModalTop strong {
+    color: #f8f7ef;
+    font-size: 0.82rem;
+  }
+
+  .leaderboardModalTop button {
+    min-width: 3.2rem;
+    min-height: 2.6rem;
+    padding: 0 0.75rem;
+    border-radius: 14px;
+    color: #f8f7ef;
+    background: rgba(179, 87, 255, 0.28);
+  }
+
+  .leaderboardModalScroll .leaderboard {
+    gap: 0.55rem;
+    padding: 0.65rem;
+  }
+
+  .leaderboardHeader h2 {
+    font-size: clamp(1.8rem, 10vw, 2.6rem);
+  }
+
+  .rewardPanel {
+    gap: 0.4rem;
+    padding: 0.62rem;
+    border: 1px solid rgba(179, 87, 255, 0.32);
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(179, 87, 255, 0.18), rgba(179, 87, 255, 0.04)),
+      rgba(0, 0, 0, 0.42);
+  }
+
+  .rewardPanel h3 {
+    color: #f8f7ef;
+    font-size: 0.88rem;
+    text-shadow: 0 0 12px rgba(179, 87, 255, 0.32);
+  }
+
+  .rewardPanel p {
+    min-height: 0;
+    grid-template-columns: 5.6rem minmax(0, 1fr);
+    padding: 0.38rem 0;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .rewardPanel p span {
+    color: #8dde3e;
+    font-size: 0.68rem;
+  }
+
+  .rewardPanel p strong,
+  .rewardPanel > strong {
+    color: #ffd335;
+    font-size: 0.72rem;
+  }
+
+  .playerBest {
+    display: none;
+  }
+
+  .leaderboardList {
+    gap: 0.42rem;
+  }
+
+  .leaderboardRow {
+    grid-template-columns: 1.75rem 2.55rem minmax(0, 1fr) auto;
+    gap: 0.44rem;
+    min-height: 4.05rem;
+    padding: 0.45rem;
+    border-radius: 14px;
+  }
+
+  .leaderboardAvatar {
+    width: 2.32rem;
+    height: 2.32rem;
+  }
+
+  .leaderboardRow span {
+    color: #f8f7ef;
+    font-size: 0.68rem;
+  }
+
+  .leaderboardRow small,
+  .xHandleText {
+    color: rgba(247, 242, 223, 0.64);
+    font-size: 0.56rem;
+  }
+
+  .leaderboardRow b {
+    color: #8dde3e;
+    font-size: 0.82rem;
+  }
+}
+
 /* Absolute final challenge intro positioning. Keep this after all overlay overrides. */
 .gamePage .gameOverlay:has(.challengeIntro) {
   display: flex !important;
