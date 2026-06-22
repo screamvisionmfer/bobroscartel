@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { AnimatePresence, animate, motion, useMotionValue, useScroll, useSpring, useTransform, type MotionStyle, type PanInfo, type Variants } from "framer-motion";
 import SiteHeader from "../components/SiteHeader";
 
@@ -75,6 +75,7 @@ function pickDisplayTraits(metadata: NftMetadata | null | undefined) {
 }
 
 const contractAddress = "4nV5gNwwP68zUDat26ySChREqVaQaLudfJBkSgEzpump";
+const bobrosContractAddress = "CmWqeLBxd1vqTSyp3mumWdhRAVsLYKV8KPHsAjjTpump";
 const buyUrl =
   "https://jup.ag/swap?sell=So11111111111111111111111111111111111111112&buy=4nV5gNwwP68zUDat26ySChREqVaQaLudfJBkSgEzpump";
 const billboardMessage = "WELCOME TO\nTHE CLUB, BOBUDDY!";
@@ -317,6 +318,76 @@ function AtmInteractive({ style }: { style?: MotionStyle } = {}) {
         </a>
       </div>
     </motion.div>
+  );
+}
+
+function ContractAddressSection() {
+  const [copied, setCopied] = useState(false);
+  const copyResetTimeout = useRef<number | undefined>(undefined);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(bobrosContractAddress);
+      setCopied(true);
+
+      if (copyResetTimeout.current) window.clearTimeout(copyResetTimeout.current);
+      copyResetTimeout.current = window.setTimeout(() => {
+        setCopied(false);
+        copyResetTimeout.current = undefined;
+      }, 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const handleAddressKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleCopy();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeout.current) window.clearTimeout(copyResetTimeout.current);
+    };
+  }, []);
+
+  return (
+    <motion.section
+      className="contract-section shell"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: false, amount: 0.35 }}
+      variants={sectionReveal}
+    >
+      <div className="contract-card">
+        <div className="contract-copy">
+          <span className="contract-title">CONTRACT ADDRESS</span>
+          <div className="contract-address-line">
+            <span className="contract-paw-icon" aria-hidden="true">
+              <span className="paw-toe paw-toe-1" />
+              <span className="paw-toe paw-toe-2" />
+              <span className="paw-toe paw-toe-3" />
+              <span className="paw-pad" />
+            </span>
+            <span
+              className="contract-address-value"
+              role="button"
+              tabIndex={0}
+              title="Copy contract address"
+              onClick={handleCopy}
+              onKeyDown={handleAddressKeyDown}
+            >
+              {bobrosContractAddress}
+            </span>
+          </div>
+        </div>
+
+        <button className="contract-copy-button" type="button" onClick={handleCopy}>
+          {copied ? "COPIED!" : "COPY CA"}
+        </button>
+      </div>
+    </motion.section>
   );
 }
 
@@ -843,6 +914,8 @@ export default function Home() {
       <SiteHeader logoStyle={{ x: logoX, y: logoY }} navStyle={{ x: navX, y: navY }} theme={theme} onThemeToggle={toggleTheme} />
 
       <HeroScene />
+
+      <ContractAddressSection />
 
       <motion.section
         className="about-row shell"

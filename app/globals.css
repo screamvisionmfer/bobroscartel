@@ -550,6 +550,159 @@ img {
   opacity: 0.72;
 }
 
+.contract-section {
+  position: relative;
+  z-index: 3;
+  margin-top: clamp(0.9rem, 2vh, 1.4rem);
+  padding-bottom: clamp(1rem, 2.4vw, 1.7rem);
+}
+
+.contract-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.8rem, 1.8vw, 1.4rem);
+  padding: clamp(0.9rem, 1.7vw, 1.3rem);
+  border: 3px solid rgba(0, 0, 0, 0.78);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 239, 196, 0.92), rgba(242, 199, 58, 0.82)),
+    #f1d690;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.12), 0 18px 30px rgba(0, 0, 0, 0.12);
+  transform-origin: center;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.contract-card:hover {
+  transform: translateY(-3px) rotate(-0.15deg);
+  box-shadow: 0 13px 0 rgba(0, 0, 0, 0.13), 0 24px 36px rgba(0, 0, 0, 0.15);
+}
+
+.contract-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.55rem;
+}
+
+.contract-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  opacity: 0.74;
+}
+
+.contract-address-line {
+  display: flex;
+  align-items: center;
+  gap: 0.72rem;
+  min-width: 0;
+}
+
+.contract-paw-icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 2.5px solid rgba(0, 0, 0, 0.78);
+  border-radius: 50%;
+  background: #f16393;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.14);
+  transform: rotate(-8deg);
+}
+
+.paw-toe,
+.paw-pad {
+  position: absolute;
+  display: block;
+  background: #151515;
+}
+
+.paw-toe {
+  width: 0.42rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  top: 0.46rem;
+}
+
+.paw-toe-1 { left: 0.56rem; transform: rotate(-18deg); }
+.paw-toe-2 { left: 0.98rem; top: 0.32rem; }
+.paw-toe-3 { right: 0.56rem; transform: rotate(18deg); }
+
+.paw-pad {
+  left: 50%;
+  bottom: 0.42rem;
+  width: 1.05rem;
+  height: 0.85rem;
+  border-radius: 55% 55% 45% 45%;
+  transform: translateX(-50%);
+}
+
+.contract-address-value {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 2px dashed rgba(0, 0, 0, 0.48);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.28);
+  cursor: copy;
+  user-select: text;
+  overflow-wrap: anywhere;
+  font-size: clamp(0.82rem, 0.65vw + 0.7rem, 1rem);
+  line-height: 1.3;
+}
+
+.contract-address-value:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 4px;
+}
+
+.contract-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8.5rem;
+  min-height: 3.2rem;
+  padding: 0.74rem 1rem;
+  border: 3px solid rgba(0, 0, 0, 0.8);
+  border-radius: 999px;
+  background: #f16393;
+  color: #111;
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  font-family: "The Chello", "Courier New", monospace;
+  font-size: clamp(1.25rem, 1.45vw, 1.62rem);
+  line-height: 0.95;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.contract-copy-button:hover {
+  background: #f2c73a;
+  box-shadow: 0 9px 0 rgba(0, 0, 0, 0.18);
+  transform: scale(1.04) rotate(0.35deg);
+}
+
+.contract-copy-button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 4px;
+}
+
+.theme-night .contract-card {
+  background:
+    linear-gradient(135deg, rgba(255, 215, 105, 0.9), rgba(75, 184, 231, 0.72)),
+    #203d73;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.26), 0 0 24px rgba(242, 199, 58, 0.16), 0 18px 34px rgba(0, 0, 0, 0.24);
+}
+
+.theme-night .contract-address-value {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 244, 168, 0.48);
+}
+
+.theme-night .contract-paw-icon {
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.24), 0 0 18px rgba(241, 99, 147, 0.18);
+}
+
 .about-row {
   position: relative;
   z-index: 3;
@@ -1907,6 +2060,38 @@ img {
 
   .scroll-down-reveal {
     bottom: 1.15rem;
+  }
+
+  .contract-section {
+    margin-top: 0.8rem;
+    padding-bottom: 1rem;
+  }
+
+  .contract-card {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding: 0.85rem;
+  }
+
+  .contract-address-line {
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .contract-paw-icon {
+    width: 2.15rem;
+    height: 2.15rem;
+    margin-top: 0.08rem;
+  }
+
+  .contract-address-value {
+    padding: 0.5rem 0.58rem;
+    font-size: 0.78rem;
+  }
+
+  .contract-copy-button {
+    width: 100%;
+    min-height: 3rem;
   }
 
   .stats-grid {
