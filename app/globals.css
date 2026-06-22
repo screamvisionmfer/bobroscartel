@@ -598,43 +598,39 @@ img {
   min-width: 0;
 }
 
-.contract-paw-icon {
+.contract-token-icon {
   position: relative;
   flex: 0 0 auto;
   width: 2.4rem;
   height: 2.4rem;
   border: 2.5px solid rgba(0, 0, 0, 0.78);
   border-radius: 50%;
-  background: #f16393;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.85) 0 12%, transparent 13%),
+    linear-gradient(135deg, #f2c73a, #f16393);
   box-shadow: 0 5px 0 rgba(0, 0, 0, 0.14);
-  transform: rotate(-8deg);
+  transform: rotate(-7deg);
 }
 
-.paw-toe,
-.paw-pad {
+.contract-token-icon::after {
+  content: "";
   position: absolute;
-  display: block;
-  background: #151515;
-}
-
-.paw-toe {
-  width: 0.42rem;
-  height: 0.5rem;
+  inset: 0.22rem;
+  border: 1.5px dashed rgba(0, 0, 0, 0.42);
   border-radius: 50%;
-  top: 0.46rem;
 }
 
-.paw-toe-1 { left: 0.56rem; transform: rotate(-18deg); }
-.paw-toe-2 { left: 0.98rem; top: 0.32rem; }
-.paw-toe-3 { right: 0.56rem; transform: rotate(18deg); }
-
-.paw-pad {
-  left: 50%;
-  bottom: 0.42rem;
-  width: 1.05rem;
-  height: 0.85rem;
-  border-radius: 55% 55% 45% 45%;
-  transform: translateX(-50%);
+.contract-token-icon span {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "The Chello", "Courier New", monospace;
+  font-size: 1.12rem;
+  line-height: 1;
+  transform: rotate(7deg) translateY(1px);
 }
 
 .contract-address-value {
@@ -688,19 +684,45 @@ img {
 }
 
 .theme-night .contract-card {
+  color: #fff4a8;
   background:
-    linear-gradient(135deg, rgba(255, 215, 105, 0.9), rgba(75, 184, 231, 0.72)),
-    #203d73;
-  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.26), 0 0 24px rgba(242, 199, 58, 0.16), 0 18px 34px rgba(0, 0, 0, 0.24);
+    linear-gradient(135deg, rgba(12, 24, 67, 0.98), rgba(9, 78, 116, 0.94)),
+    #07152f;
+  border-color: rgba(255, 244, 168, 0.86);
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.42), 0 0 28px rgba(255, 220, 82, 0.34), 0 18px 34px rgba(0, 0, 0, 0.34);
+}
+
+.theme-night .contract-title {
+  color: #ffe75c;
+  opacity: 1;
 }
 
 .theme-night .contract-address-value {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 244, 168, 0.48);
+  background: rgba(0, 0, 0, 0.42);
+  border-color: rgba(255, 231, 92, 0.72);
+  color: #f9fff1;
+  text-shadow: 0 0 8px rgba(255, 231, 92, 0.18);
 }
 
-.theme-night .contract-paw-icon {
-  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.24), 0 0 18px rgba(241, 99, 147, 0.18);
+.theme-night .contract-token-icon {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.9) 0 12%, transparent 13%),
+    linear-gradient(135deg, #ffe75c, #31d7ff);
+  border-color: rgba(255, 244, 168, 0.9);
+  color: #07152f;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.34), 0 0 20px rgba(49, 215, 255, 0.32);
+}
+
+.theme-night .contract-copy-button {
+  background: #ff4f9a;
+  color: #fff9c9;
+  border-color: rgba(255, 244, 168, 0.9);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.36), 0 0 18px rgba(255, 79, 154, 0.34);
+}
+
+.theme-night .contract-copy-button:hover {
+  background: #ffe75c;
+  color: #07152f;
 }
 
 .about-row {
@@ -2078,7 +2100,7 @@ img {
     gap: 0.55rem;
   }
 
-  .contract-paw-icon {
+  .contract-token-icon {
     width: 2.15rem;
     height: 2.15rem;
     margin-top: 0.08rem;

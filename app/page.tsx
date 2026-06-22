@@ -362,13 +362,10 @@ function ContractAddressSection() {
     >
       <div className="contract-card">
         <div className="contract-copy">
-          <span className="contract-title">CONTRACT ADDRESS</span>
+          <span className="contract-title">$BOBROS CA</span>
           <div className="contract-address-line">
-            <span className="contract-paw-icon" aria-hidden="true">
-              <span className="paw-toe paw-toe-1" />
-              <span className="paw-toe paw-toe-2" />
-              <span className="paw-toe paw-toe-3" />
-              <span className="paw-pad" />
+            <span className="contract-token-icon" aria-hidden="true">
+              <span>$B</span>
             </span>
             <span
               className="contract-address-value"
